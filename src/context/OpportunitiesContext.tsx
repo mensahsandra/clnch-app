@@ -92,6 +92,7 @@ interface OpportunitiesContextValue {
   opportunities: Opportunity[];
   addOpportunity: (opp: Opportunity) => void;
   updateOpportunity: (id: string, patch: Partial<Opportunity>) => void;
+  deleteOpportunity: (id: string) => void;
 }
 
 const OpportunitiesContext = createContext<OpportunitiesContextValue | null>(null);
@@ -107,8 +108,12 @@ export function OpportunitiesProvider({ children }: { children: ReactNode }) {
     setOpportunities((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)));
   }, []);
 
+  const deleteOpportunity = useCallback((id: string) => {
+    setOpportunities((prev) => prev.filter((o) => o.id !== id));
+  }, []);
+
   return (
-    <OpportunitiesContext.Provider value={{ opportunities, addOpportunity, updateOpportunity }}>
+    <OpportunitiesContext.Provider value={{ opportunities, addOpportunity, updateOpportunity, deleteOpportunity }}>
       {children}
     </OpportunitiesContext.Provider>
   );

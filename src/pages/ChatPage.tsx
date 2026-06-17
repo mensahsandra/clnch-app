@@ -87,7 +87,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showDetail, setShowDetail] = useState(true);
+  const [showDetail, setShowDetail] = useState(false);
+  const [chatTitle, setChatTitle] = useState(`${MOCK_OPP.org} — ${MOCK_OPP.title}`);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [detailWidth, setDetailWidth] = useState(DEFAULT_PANEL_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -268,22 +271,50 @@ export default function ChatPage() {
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
 
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = inputRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    const newHeight = Math.min(ta.scrollHeight, 160);
+    ta.style.height = `${newHeight}px`;
+  }, [input]);
+
   return (
     <div className="flex h-full bg-cream overflow-hidden">
       {/* Chat Column */}
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         {/* Breadcrumb */}
         <div className="h-[52px] bg-card-white border-b border-card-border flex items-center justify-between px-5 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
               onClick={() => navigate('/')}
               className="p-1.5 rounded-lg hover:bg-cream-fill transition-colors flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4 text-slate" />
             </button>
-            <span className="text-sm font-semibold text-charcoal truncate">
-              {MOCK_OPP.org} — {MOCK_OPP.title}
-            </span>
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                value={chatTitle}
+                onChange={(e) => setChatTitle(e.target.value)}
+                onBlur={() => setIsEditingTitle(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setIsEditingTitle(false);
+                  if (e.key === 'Escape') { setIsEditingTitle(false); setChatTitle(`${MOCK_OPP.org} — ${MOCK_OPP.title}`); }
+                }}
+                className="flex-1 text-sm font-semibold text-charcoal bg-cream-fill border border-card-border rounded-lg px-3 py-1 outline-none focus:ring-2 focus:ring-burnt-orange/20"
+                autoFocus
+              />
+            ) : (
+              <button
+                onClick={() => { setIsEditingTitle(true); setTimeout(() => titleInputRef.current?.focus(), 0); }}
+                className="text-sm font-semibold text-charcoal truncate hover:bg-cream-fill rounded-lg px-2 py-1 transition-colors text-left"
+                title="Click to rename"
+              >
+                {chatTitle}
+              </button>
+            )}
           </div>
           {/* Files button now opens detail panel */}
           <button
@@ -382,8 +413,8 @@ export default function ChatPage() {
               onKeyDown={handleKeyDown}
               placeholder="Type your draft, raw ideas, or speak with the mic..."
               rows={1}
-              className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-slate/50 resize-none focus:outline-none leading-relaxed"
-              style={{ maxHeight: 120, overflowY: 'auto' }}
+              className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-slate/50 resize-none focus:outline-none leading-relaxed min-h-[24px]"
+              style={{ maxHeight: 160, overflowY: 'auto' }}
             />
             <button
               onClick={handleSend}
@@ -403,14 +434,14 @@ export default function ChatPage() {
       {showDetail && (
         <>
           {/* Drag handle */}
-          {/* Draggable splitter */}
+          {/* Draggable splitter with grip button */}
           <div
             onMouseDown={handleDragMouseDown}
-            className={`w-1 flex-shrink-0 cursor-col-resize transition-colors flex items-center justify-center group ${
-              isDragging ? 'bg-burnt-orange' : 'bg-card-border hover:bg-burnt-orange/40'
-            }`}
+            className="w-2 flex-shrink-0 cursor-col-resize transition-colors flex items-center justify-center group bg-card-border hover:bg-burnt-orange/30"
           >
-            <div className="w-1 h-10 rounded-full bg-slate/20 group-hover:bg-burnt-orange/60 transition-colors" />
+            <div className="w-6 h-10 rounded-full bg-card-white border border-card-border shadow-sm flex items-center justify-center cursor-col-resize group-hover:border-burnt-orange/40 group-hover:shadow-md transition-all">
+              <svg className="w-3 h-3 text-slate/50 group-hover:text-burnt-orange transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+            </div>
           </div>
 
           {/* Detail Panel — no header, just floating buttons */}

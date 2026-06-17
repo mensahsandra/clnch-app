@@ -111,7 +111,7 @@ export default function NavSidebar() {
         backgroundColor: 'var(--sidebar-bg)',
         borderRight: '1px solid var(--sidebar-border)',
       }}
-      className="fixed left-0 top-0 h-screen z-50 flex flex-col overflow-hidden select-none"
+      className="fixed left-0 top-0 h-screen z-50 flex flex-col select-none"
     >
       {/* Brand */}
       <div className="flex items-center px-3 py-3 min-h-[56px] flex-shrink-0">

@@ -1,4 +1,7 @@
+import { useState } from 'react';
+import { MoreVertical, Trash2, Eye } from 'lucide-react';
 import { type Opportunity } from '../types';
+import { useOpportunities } from '../context/OpportunitiesContext';
 
 const categoryColors: Record<string, string> = {
   fellowship: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -47,6 +50,9 @@ interface OpportunityCardProps {
 }
 
 export default function OpportunityCard({ opp, isSelected, onClick }: OpportunityCardProps) {
+  const { deleteOpportunity } = useOpportunities();
+  const [showMenu, setShowMenu] = useState(false);
+
   return (
     <div
       onClick={() => onClick?.(opp)}
@@ -65,13 +71,57 @@ export default function OpportunityCard({ opp, isSelected, onClick }: Opportunit
         >
           {categoryLabel[opp.category] ?? opp.category}
         </span>
-        <span
-          className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${
-            statusStyles[opp.status] ?? 'bg-gray-100 text-slate'
-          }`}
-        >
-          {statusLabel[opp.status] ?? opp.status}
-        </span>
+        <div className="flex items-center gap-1">
+          <span
+            className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${
+              statusStyles[opp.status] ?? 'bg-gray-100 text-slate'
+            }`}
+          >
+            {statusLabel[opp.status] ?? opp.status}
+          </span>
+          {/* More options dropdown */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="p-1 rounded-md hover:bg-cream-fill transition-colors"
+            >
+              <MoreVertical className="w-3.5 h-3.5 text-slate" />
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-card-white border border-card-border rounded-lg shadow-xl py-1 z-50 min-w-[140px]">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClick?.(opp);
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    View More
+                  </button>
+                  <div className="border-t border-card-border mx-2" />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteOpportunity(opp.id);
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Monitor status */}
@@ -141,7 +191,7 @@ export default function OpportunityCard({ opp, isSelected, onClick }: Opportunit
             onClick?.(opp);
           }}
         >
-          Manage Pitch →
+          View More →
         </button>
       </div>
     </div>
