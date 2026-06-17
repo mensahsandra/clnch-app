@@ -1,0 +1,17 @@
+{
+  "name": "CLNCH",
+  "short_name": "CLNCH",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#c4622d",
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "capture"
+    }
+  }
+}
