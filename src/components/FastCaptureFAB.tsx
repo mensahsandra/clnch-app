@@ -10,7 +10,11 @@ export default function FastCaptureFAB() {
   const { rightPanelWidth } = useWorkspace();
 
   const handleSubmit = async (data: CaptureData) => {
-    await captureUrl(data.link);
+    await captureUrl(data.link, {
+      description: data.description,
+      categoryHints: data.categoryHints,
+      screenshots: data.screenshots,
+    });
   };
 
   const rightOffset = rightPanelWidth > 0 ? rightPanelWidth + 24 : 24;

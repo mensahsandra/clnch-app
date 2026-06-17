@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import TopBar, { type ViewMode } from '../components/TopBar';
 import OpportunityCard from '../components/OpportunityCard';
 import RightPanel from '../components/RightPanel';
-import SplitWorkspace from '../components/SplitWorkspace';
+import DraggableSplitter from '../components/DraggableSplitter';
 import { useOpportunities } from '../context/OpportunitiesContext';
 import { useFastCapture } from '../context/FastCaptureContext';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -79,72 +79,82 @@ export default function HomePage({ filterMode = 'all' }: HomePageProps) {
   const panelOpen = rightPanelWidth > 0;
 
   return (
-    <div className="flex flex-col h-full">
-      <TopBar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        search={search}
-        onSearchChange={setSearch}
-        selectedCategories={selectedCategories}
-        onCategoryToggle={handleCategoryToggle}
-        rightPanelWidth={rightPanelWidth}
-      />
-
-      <main
-        className="flex-1 overflow-y-auto scrollbar-thin p-6"
-        style={{ marginRight: panelOpen ? rightPanelWidth + 4 : 28 }}
-      >
-        {selectedCategories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-5">
-            {selectedCategories.map((id) => (
-              <span
-                key={id}
-                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-burnt-orange/10 text-burnt-orange rounded-full font-medium"
-              >
-                {CATEGORY_LABELS[id]}
-                <button onClick={() => handleCategoryToggle(id)} className="leading-none hover:opacity-70">
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {filtered.length === 0 ? (
-          <EmptyState onAdd={() => captureFromClipboard()} />
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((o) => (
-              <OpportunityCard
-                key={o.id}
-                opp={o}
-                isSelected={selectedOpp?.id === o.id}
-                onClick={handleCardClick}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((o) => (
-              <ListRow key={o.id} opp={o} isSelected={selectedOpp?.id === o.id} onClick={handleCardClick} />
-            ))}
-          </div>
-        )}
-      </main>
-
-      <SplitWorkspace
-        isOpen={panelOpen}
-        onClose={() => setRightPanelWidth(0)}
-        panelWidth={rightPanelWidth}
-        onWidthChange={setRightPanelWidth}
-      >
-        <RightPanel
-          opp={selectedOpp ?? undefined}
-          onClose={() => setRightPanelWidth(0)}
-          panelWidth={rightPanelWidth}
-          onWidthChange={setRightPanelWidth}
+    <div className="flex h-full overflow-hidden">
+      {/* Left pane: TopBar + main content (resizable together) */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <TopBar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          search={search}
+          onSearchChange={setSearch}
+          selectedCategories={selectedCategories}
+          onCategoryToggle={handleCategoryToggle}
+          rightPanelWidth={rightPanelWidth}
         />
-      </SplitWorkspace>
+
+        <main className="flex-1 overflow-y-auto scrollbar-thin p-6">
+          {selectedCategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {selectedCategories.map((id) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-burnt-orange/10 text-burnt-orange rounded-full font-medium"
+                >
+                  {CATEGORY_LABELS[id]}
+                  <button onClick={() => handleCategoryToggle(id)} className="leading-none hover:opacity-70">
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <EmptyState onAdd={() => captureFromClipboard()} />
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((o) => (
+                <OpportunityCard
+                  key={o.id}
+                  opp={o}
+                  isSelected={selectedOpp?.id === o.id}
+                  onClick={handleCardClick}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((o) => (
+                <ListRow key={o.id} opp={o} isSelected={selectedOpp?.id === o.id} onClick={handleCardClick} />
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* Draggable Splitter */}
+        {panelOpen && (
+          <DraggableSplitter
+            rightPanelWidth={rightPanelWidth}
+            onWidthChange={setRightPanelWidth}
+            hasSelection={!!selectedOpp}
+          />
+        )}
+
+        {/* Right Panel */}
+        {panelOpen && (
+          <div
+            className="flex-shrink-0 bg-card-white border-l border-card-border flex flex-col overflow-hidden"
+            style={{ width: rightPanelWidth }}
+          >
+            <RightPanel
+              opp={selectedOpp ?? undefined}
+              onClose={() => setRightPanelWidth(0)}
+              panelWidth={rightPanelWidth}
+              onWidthChange={setRightPanelWidth}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

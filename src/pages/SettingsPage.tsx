@@ -415,10 +415,10 @@ export default function SettingsPage() {
 
         {/* ── BILLING ── */}
         <section ref={(el) => { sectionRefs.current['billing'] = el; }} className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
+          <div className={`flex items-center gap-2 mb-4 ${searchParams.get('tab') === 'billing' ? 'animate-pulse' : ''}`}>
             <h2 className="text-lg font-bold text-charcoal">Billing</h2>
             {searchParams.get('tab') === 'billing' && (
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-burnt-orange/10 text-burnt-orange animate-pulse">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-burnt-orange/10 text-burnt-orange">
                 Upgrade available
               </span>
             )}
@@ -426,7 +426,7 @@ export default function SettingsPage() {
 
           {/* Highlight banner when arriving from Upgrade Tier */}
           {searchParams.get('tab') === 'billing' && (
-            <div className="mb-4 flex items-start gap-3 p-4 rounded-xl bg-burnt-orange/8 border border-burnt-orange/20">
+            <div className="mb-4 flex items-start gap-3 p-4 rounded-xl bg-burnt-orange/10 border border-burnt-orange/30 animate-fade-in">
               <Zap className="w-5 h-5 text-burnt-orange flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-charcoal">Unlock the full CLNCH experience</p>

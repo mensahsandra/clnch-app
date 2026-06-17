@@ -19,11 +19,17 @@ import type { Opportunity } from '../types';
 
 type CaptureStatus = 'idle' | 'processing' | 'success' | 'error';
 
+interface CaptureContext {
+  description?: string;
+  categoryHints?: string[];
+  screenshots?: File[];
+}
+
 interface FastCaptureContextValue {
   status: CaptureStatus;
   message: string;
   captureFromClipboard: () => Promise<void>;
-  captureUrl: (url: string) => Promise<void>;
+  captureUrl: (url: string, context?: CaptureContext) => Promise<void>;
 }
 
 const FastCaptureContext = createContext<FastCaptureContextValue | null>(null);
@@ -75,12 +81,16 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const runCapture = useCallback(
-    async (url: string) => {
+    async (url: string, context?: CaptureContext) => {
       setStatus('processing');
       setMessage(`Scraping ${new URL(url).hostname}…`);
 
       try {
-        const scraped = await scrapeOpportunityUrl(url);
+        const scraped = await scrapeOpportunityUrl(url, {
+          description: context?.description,
+          categoryHints: context?.categoryHints,
+          screenshots: context?.screenshots,
+        });
         const days = daysUntil(scraped.deadline);
 
         const opp: Opportunity = {
@@ -113,7 +123,7 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
   );
 
   const captureUrl = useCallback(
-    async (url: string) => {
+    async (url: string, context?: CaptureContext) => {
       const normalized = extractUrlFromText(url);
       if (!normalized) {
         setStatus('error');
@@ -121,7 +131,7 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
         setTimeout(dismiss, 3000);
         return;
       }
-      await runCapture(normalized);
+      await runCapture(normalized, context);
     },
     [runCapture, dismiss]
   );

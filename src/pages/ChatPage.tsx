@@ -403,12 +403,15 @@ export default function ChatPage() {
       {showDetail && (
         <>
           {/* Drag handle */}
+          {/* Draggable splitter */}
           <div
             onMouseDown={handleDragMouseDown}
-            className={`w-1 flex-shrink-0 cursor-col-resize transition-colors ${
+            className={`w-1 flex-shrink-0 cursor-col-resize transition-colors flex items-center justify-center group ${
               isDragging ? 'bg-burnt-orange' : 'bg-card-border hover:bg-burnt-orange/40'
             }`}
-          />
+          >
+            <div className="w-1 h-10 rounded-full bg-slate/20 group-hover:bg-burnt-orange/60 transition-colors" />
+          </div>
 
           {/* Detail Panel — no header, just floating buttons */}
           <div
