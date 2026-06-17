@@ -91,6 +91,7 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
   const [isListening, setIsListening] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const opportunity: Opportunity = opp ?? {
@@ -118,6 +119,10 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatTyping]);
+
+  useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [opportunity.id]);
 
   const handleMarkAsFiled = async () => {
     setIsSubmitting(true);
@@ -202,7 +207,7 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
       </button>
 
       {/* Scrollable Body */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 pt-4 pb-2 space-y-3">
 
           {/* Opportunity title */}
@@ -329,22 +334,24 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
             </div>
           )}
 
-          {/* Primary Action */}
-          <button
-            onClick={handleApplyNow}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-burnt-orange text-white font-semibold text-sm rounded-xl hover:bg-burnt-orange/90 active:scale-[0.98] transition-all shadow-md shadow-burnt-orange/20"
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            Apply Now via CLNCH Coach
-          </button>
+          {/* Primary Actions - Compact */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleApplyNow}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-burnt-orange text-white font-medium text-xs rounded-lg hover:bg-burnt-orange/90 active:scale-[0.98] transition-all"
+            >
+              <ArrowUpRight className="w-3 h-3" />
+              Apply via CLNCH Coach
+            </button>
 
-          <button
-            onClick={() => navigate(`/chat/${opportunity.id}`)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-cream-fill text-charcoal font-medium text-xs rounded-xl hover:bg-cream transition-colors"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-            Open full coaching workspace
-          </button>
+            <button
+              onClick={() => navigate(`/chat/${opportunity.id}`)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-cream-fill text-charcoal font-medium text-xs rounded-lg hover:bg-cream transition-colors"
+            >
+              <Maximize2 className="w-3 h-3" />
+              Open Conversation
+            </button>
+          </div>
         </div>
 
         {/* Divider + Embedded Chat */}
@@ -426,19 +433,19 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
       </div>
 
       {/* Sticky Footer */}
-      <div className="flex-shrink-0 border-t border-card-border px-4 py-3 bg-card-white">
+      <div className="flex-shrink-0 border-t border-card-border px-4 py-2.5 bg-card-white">
         <button
           onClick={handleMarkAsFiled}
           disabled={isSubmitting || isFiled}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all ${
+          className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-medium text-xs transition-all ${
             isFiled
               ? 'bg-green-600 text-white cursor-default'
               : 'bg-charcoal text-white hover:bg-charcoal/90 active:scale-[0.98]'
           } disabled:opacity-60`}
         >
-          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          {isFiled && <CheckCircle2 className="w-4 h-4" />}
-          {isSubmitting ? 'Processing...' : isFiled ? 'Filed Successfully' : 'Mark as Filed'}
+          {isSubmitting && <Loader2 className="w-3 h-3 animate-spin" />}
+          {isFiled && <CheckCircle2 className="w-3 h-3" />}
+          {isSubmitting ? 'Processing...' : isFiled ? 'Filed' : 'Mark as Filed'}
         </button>
       </div>
     </div>
