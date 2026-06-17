@@ -20,12 +20,23 @@ import {
   Trash2,
   Bell,
   Check,
+  FileText,
+  Briefcase,
+  Target,
+  Rocket,
+  Sparkles,
+  Lightbulb,
+  Link as LinkIcon,
+  BookOpen,
+  GraduationCap,
+  Pencil,
 } from 'lucide-react';
 import { useMonitoring } from '../context/MonitoringContext';
 import { useTheme } from '../context/ThemeContext';
 
 const SECTIONS = [
   { id: 'general', label: 'General', icon: Settings },
+  { id: 'knowledge', label: 'Knowledge', icon: Brain },
   { id: 'account', label: 'Account', icon: User },
   { id: 'privacy', label: 'Privacy', icon: Shield },
   { id: 'billing', label: 'Billing', icon: CreditCard },
@@ -313,6 +324,142 @@ export default function SettingsPage() {
                   <option key={l}>{l}</option>
                 ))}
               </select>
+            </div>
+          </SectionCard>
+        </section>
+
+        {/* ── KNOWLEDGE ── */}
+        <section ref={(el) => { sectionRefs.current['knowledge'] = el; }} className="mb-8">
+          <h2 className="text-lg font-bold text-charcoal mb-4">Knowledge</h2>
+          <p className="text-sm text-slate mb-4">
+            Add context about yourself so CLNCH can reference your background in coaching conversations and provide more personalised, relevant results.
+          </p>
+
+          <SectionCard title="Professional Profile">
+            <div className="py-3 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Current Role / Title</label>
+                <input className="input-field" placeholder="e.g. Software Engineer, Founder, Student..." />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Background Summary</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={3}
+                  placeholder="Describe your professional background, skills, and experience..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate mb-1 block">LinkedIn Profile</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate" />
+                    <input className="input-field pl-8" placeholder="linkedin.com/in/..." />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate mb-1 block">GitHub Profile</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate" />
+                    <input className="input-field pl-8" placeholder="github.com/..." />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate mb-1 block">Facebook / Portfolio</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate" />
+                    <input className="input-field pl-8" placeholder="facebook.com/... or portfolio URL" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate mb-1 block">Business Website</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate" />
+                    <input className="input-field pl-8" placeholder="yourcompany.com" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="CV / Resume">
+            <div className="py-3">
+              <p className="text-xs text-slate mb-2">Upload your latest CV or resume. CLNCH will use it to tailor coaching and application advice.</p>
+              <div className="border-2 border-dashed border-card-border rounded-xl p-6 text-center hover:border-burnt-orange/30 transition-colors cursor-pointer">
+                <FileText className="w-8 h-8 text-slate/30 mx-auto mb-2" />
+                <p className="text-sm text-slate font-medium">Drop your CV here or click to upload</p>
+                <p className="text-xs text-slate/60 mt-1">PDF or DOCX, up to 5MB</p>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Goals & Aspirations">
+            <div className="py-3 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">What are you looking for?</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={2}
+                  placeholder="e.g. Fellowships in AI research, grants for climate startups, remote engineering roles..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Short-term Goals (3-6 months)</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={2}
+                  placeholder="e.g. Apply to 3 fellowships, secure funding for my startup, land a senior role..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Long-term Vision</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={2}
+                  placeholder="e.g. Build a sustainable AI company in Africa, become a research leader..."
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="About You">
+            <div className="py-3 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Are you a founder, entrepreneur, or builder?</label>
+                <div className="flex flex-wrap gap-2">
+                  {['Founder', 'Entrepreneur', 'Builder', 'Student', 'Researcher', 'Professional', 'Freelancer'].map((role) => (
+                    <button key={role} className="px-3 py-1.5 rounded-full border border-card-border text-xs text-slate hover:bg-cream-fill hover:text-charcoal transition-colors">
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Current Projects / Ideas</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={3}
+                  placeholder="What are you working on right now? Any ideas, side projects, or ventures?"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Recent Achievements</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={2}
+                  placeholder="e.g. Published a paper, launched an MVP, won a hackathon, got a promotion..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate mb-1 block">Anything else CLNCH should know?</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={3}
+                  placeholder="Context that helps CLNCH coach you better — your writing style, communication preferences, specific challenges, etc."
+                />
+              </div>
             </div>
           </SectionCard>
         </section>

@@ -130,31 +130,31 @@ export default function HomePage({ filterMode = 'all' }: HomePageProps) {
             </div>
           )}
         </main>
-
-        {/* Draggable Splitter */}
-        {panelOpen && (
-          <DraggableSplitter
-            rightPanelWidth={rightPanelWidth}
-            onWidthChange={setRightPanelWidth}
-            hasSelection={!!selectedOpp}
-          />
-        )}
-
-        {/* Right Panel */}
-        {panelOpen && (
-          <div
-            className="flex-shrink-0 bg-card-white border-l border-card-border flex flex-col overflow-hidden"
-            style={{ width: rightPanelWidth }}
-          >
-            <RightPanel
-              opp={selectedOpp ?? undefined}
-              onClose={() => setRightPanelWidth(0)}
-              panelWidth={rightPanelWidth}
-              onWidthChange={setRightPanelWidth}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Draggable Splitter */}
+      {panelOpen && (
+        <DraggableSplitter
+          rightPanelWidth={rightPanelWidth}
+          onWidthChange={setRightPanelWidth}
+          hasSelection={!!selectedOpp}
+        />
+      )}
+
+      {/* Right Panel */}
+      {panelOpen && (
+        <div
+          className="flex-shrink-0 bg-card-white border-l border-card-border flex flex-col overflow-hidden"
+          style={{ width: rightPanelWidth }}
+        >
+          <RightPanel
+            opp={selectedOpp ?? undefined}
+            onClose={() => setRightPanelWidth(0)}
+            panelWidth={rightPanelWidth}
+            onWidthChange={setRightPanelWidth}
+          />
+        </div>
+      )}
     </div>
   );
 }

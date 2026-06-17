@@ -99,6 +99,7 @@ export default function ChatPage() {
   const [isInjecting, setIsInjecting] = useState(false);
   const [injectComplete, setInjectComplete] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -221,10 +222,35 @@ export default function ChatPage() {
   };
 
   const handleShare = () => {
+    setShowShareMenu(!showShareMenu);
+  };
+
+  const shareVia = (platform: string) => {
     const url = `${window.location.origin}/chat/${MOCK_OPP.id}`;
-    navigator.clipboard.writeText(url);
-    setShareCopied(true);
-    setTimeout(() => setShareCopied(false), 2000);
+    const text = `Check out my CLNCH coaching workspace for ${MOCK_OPP.title} at ${MOCK_OPP.org}`;
+    let shareUrl = '';
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+        break;
+      case 'x':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        break;
+      case 'tiktok':
+        shareUrl = `https://www.tiktok.com/`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+        setShowShareMenu(false);
+        return;
+    }
+    if (shareUrl) window.open(shareUrl, '_blank', 'width=600,height=500');
+    setShowShareMenu(false);
   };
 
   const handleInjectField = async (content: string) => {
@@ -288,8 +314,9 @@ export default function ChatPage() {
         <div className="h-[52px] bg-card-white border-b border-card-border flex items-center justify-between px-5 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/chats')}
               className="p-1.5 rounded-lg hover:bg-cream-fill transition-colors flex-shrink-0"
+              title="Back to conversations"
             >
               <ArrowLeft className="w-4 h-4 text-slate" />
             </button>
@@ -451,16 +478,42 @@ export default function ChatPage() {
           >
             {/* Floating action buttons top-right */}
             <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
-              <button
-                onClick={handleShare}
-                title="Share opportunity link"
-                className="p-1.5 rounded-md hover:bg-cream-fill transition-colors"
-              >
-                {shareCopied
-                  ? <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  : <Share2 className="w-4 h-4 text-slate" />
-                }
-              </button>
+              <div className="relative">
+                <button
+                  onClick={handleShare}
+                  title="Share opportunity link"
+                  className="p-1.5 rounded-md hover:bg-cream-fill transition-colors"
+                >
+                  {shareCopied
+                    ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    : <Share2 className="w-4 h-4 text-slate" />
+                  }
+                </button>
+                {showShareMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu(false)} />
+                    <div className="absolute top-full right-0 mt-2 bg-card-white border border-card-border rounded-xl shadow-2xl py-2 z-50 w-48">
+                      <p className="px-3 py-1 text-[10px] font-semibold text-slate uppercase tracking-wider">Share via</p>
+                      <button onClick={() => shareVia('whatsapp')} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors">
+                        <span className="w-5 text-center">📱</span> WhatsApp
+                      </button>
+                      <button onClick={() => shareVia('x')} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors">
+                        <span className="w-5 text-center">𝕏</span> X / Twitter
+                      </button>
+                      <button onClick={() => shareVia('linkedin')} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors">
+                        <span className="w-5 text-center">💼</span> LinkedIn
+                      </button>
+                      <button onClick={() => shareVia('tiktok')} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors">
+                        <span className="w-5 text-center">🎵</span> TikTok
+                      </button>
+                      <div className="border-t border-card-border mx-3 my-1" />
+                      <button onClick={() => shareVia('copy')} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors">
+                        <span className="w-5 text-center">📋</span> Copy link
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 onClick={() => setShowDetail(false)}
                 className="p-1.5 rounded-md hover:bg-cream-fill transition-colors"

@@ -302,30 +302,32 @@ export default function NavSidebar() {
         </div>
 
         {/* Collapse toggle */}
-        <button
-          onClick={toggleExpanded}
-          style={{ color: 'var(--sidebar-text-muted)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--sidebar-hover-bg)';
-            e.currentTarget.style.color = 'var(--sidebar-text)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--sidebar-text-muted)';
-          }}
-          className={`w-full flex items-center gap-3 px-2.5 py-2.5 mt-1 mb-2 rounded-lg text-sm font-medium transition-colors duration-150 ${
-            !expanded ? 'justify-center' : ''
-          }`}
-        >
-          {expanded ? (
-            <>
-              <ChevronsLeft className="w-[18px] h-[18px] flex-shrink-0" />
-              <span className="whitespace-nowrap">Collapse</span>
-            </>
-          ) : (
-            <ChevronsRight className="w-[18px] h-[18px] flex-shrink-0" />
-          )}
-        </button>
+        <NavTooltip label={expanded ? 'Collapse' : 'Expand'} show={!expanded}>
+          <button
+            onClick={toggleExpanded}
+            style={{ color: 'var(--sidebar-text-muted)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--sidebar-hover-bg)';
+              e.currentTarget.style.color = 'var(--sidebar-text)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--sidebar-text-muted)';
+            }}
+            className={`w-full flex items-center gap-3 px-2.5 py-2.5 mt-1 mb-2 rounded-lg text-sm font-medium transition-colors duration-150 ${
+              !expanded ? 'justify-center' : ''
+            }`}
+          >
+            {expanded ? (
+              <>
+                <ChevronsLeft className="w-[18px] h-[18px] flex-shrink-0" />
+                <span className="whitespace-nowrap">Collapse</span>
+              </>
+            ) : (
+              <ChevronsRight className="w-[18px] h-[18px] flex-shrink-0" />
+            )}
+          </button>
+        </NavTooltip>
       </div>
     </aside>
   );
