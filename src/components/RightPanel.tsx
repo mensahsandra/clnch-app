@@ -90,6 +90,7 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
   const [isChatTyping, setIsChatTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -117,12 +118,13 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
   };
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [chatMessages, isChatTyping]);
 
   useEffect(() => {
-    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [opportunity.id]);
+    scrollContainerRef.current?.scrollTo({ top: 0 });
+  }, [opp?.id]);
 
   const handleMarkAsFiled = async () => {
     setIsSubmitting(true);
@@ -363,7 +365,7 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
           </div>
 
           {/* Chat messages */}
-          <div className="space-y-3 mb-3 max-h-64 overflow-y-auto scrollbar-thin">
+          <div ref={chatContainerRef} className="space-y-3 mb-3 max-h-64 overflow-y-auto scrollbar-thin">
             {chatMessages.map((msg) => (
               <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 {msg.role === 'assistant' && (
