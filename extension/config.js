@@ -8,11 +8,12 @@ const STORAGE_KEYS = {
 
 /**
  * Default Supabase project credentials — overridden when the web app syncs auth.
- * Set these to your project values for standalone extension use, or log in via CLNCH web app.
+ * These defaults allow the extension to work standalone; logging into CLNCH web app
+ * will sync fresh credentials and a user session.
  */
 const DEFAULT_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://xispzcvivovknwcwivjk.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpc3B6Y3Zpdm92a253Y3dpdmprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMzI4MTQsImV4cCI6MjA5NjcwODgxNH0.TVVxRGRq1tK270-C-fqBBMJSiwB-ddkMUnfdQWp4y2o',
 };
 
 /** @returns {Promise<ClnchConfig>} */

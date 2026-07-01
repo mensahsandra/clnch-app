@@ -220,7 +220,11 @@ async function executeRefinementPipeline(fieldLabel, rawInputText, sender) {
   let refinedAnswer = null;
 
   try {
-    const apiResponse = await fetch('https://clnch.app/api/refine', {
+    const config = await getConfig();
+    const supabaseUrl = config.supabaseUrl || 'https://xispzcvivovknwcwivjk.supabase.co';
+    const refineEndpoint = `${supabaseUrl}/functions/v1/refine`;
+
+    const apiResponse = await fetch(refineEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -233,8 +237,8 @@ async function executeRefinementPipeline(fieldLabel, rawInputText, sender) {
     if (apiResponse.ok) {
       const responseData = await apiResponse.json();
       refinedAnswer =
-        responseData.extractedFields?.refined_answer ||
         responseData.refinedAnswer ||
+        responseData.extractedFields?.refined_answer ||
         null;
     }
   } catch {
