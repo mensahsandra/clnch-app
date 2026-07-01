@@ -22,6 +22,7 @@ export default function FastCaptureFAB() {
   return (
     <>
       <button
+        data-tour="fast-capture"
         onClick={() => setModalOpen(true)}
         aria-label="Fast-Capture New Opportunity"
         className="fixed bottom-6 z-[100] w-14 h-14 rounded-full bg-burnt-orange hover:bg-burnt-orange/90 active:scale-95 flex items-center justify-center group"

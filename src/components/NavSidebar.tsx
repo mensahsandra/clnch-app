@@ -18,11 +18,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
+import { useAuth } from '../context/AuthContext';
+import { useOnboarding } from '../context/OnboardingContext';
 
 const navItems = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Compass, label: 'Discover', path: '/discover' },
-  { icon: MessageSquare, label: 'Chats', path: '/chats' },
+  { icon: MessageSquare, label: 'Chats', path: '/chats', tourId: 'chats' },
   { icon: Briefcase, label: 'Applied', path: '/applied' },
   { icon: History, label: 'History', path: '/history' },
 ];
@@ -32,10 +34,11 @@ const bottomLinks: Array<{
   label: string;
   path?: string;
   action?: () => void;
+  tourId?: string;
 }> = [
   { icon: BookOpen, label: 'Docs', action: () => window.open('https://clnch.app/docs', '_blank') },
   { icon: HelpCircle, label: 'Get help', action: () => window.open('https://clnch.app/help', '_blank') },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: Settings, label: 'Settings', path: '/settings', tourId: 'settings' },
 ];
 
 // Sidebar uses its own color variables so it adapts per theme
@@ -79,12 +82,28 @@ function NavTooltip({ label, children, show }: { label: string; children: ReactN
   );
 }
 
+function LogoutButton() {
+  const { signOut } = useAuth();
+  const { expanded } = useSidebar();
+  return (
+    <button
+      onClick={() => signOut()}
+      className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors ${!expanded ? 'justify-center' : ''}`}
+    >
+      <LogOut className="w-4 h-4" />
+      {expanded && <span>Log out</span>}
+    </button>
+  );
+}
+
 export default function NavSidebar() {
   const { expanded, width, toggleExpanded } = useSidebar();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const { profile: onboardingProfile } = useOnboarding();
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -101,10 +120,14 @@ export default function NavSidebar() {
     return location.pathname.startsWith(path);
   };
 
-  const user = { name: 'Sandra Mensah', email: 'sandramensah2437@gmail.com', initial: 'S', plan: 'Free plan' };
+  const userName = onboardingProfile?.preferredName || user?.email?.split('@')[0] || 'User';
+  const userEmail = user?.email || '';
+  const userInitial = userName.charAt(0).toUpperCase();
+  const userPlan = 'Free plan';
 
   return (
     <aside
+      data-tour="discover"
       style={{
         width,
         transition: 'width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
@@ -131,11 +154,12 @@ export default function NavSidebar() {
 
       {/* Main nav */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-hidden overflow-y-auto scrollbar-thin">
-        {navItems.map(({ icon: Icon, label, path }) => {
+        {navItems.map(({ icon: Icon, label, path, tourId }) => {
           const active = isActive(path);
           return (
             <NavTooltip key={path} label={label} show={!expanded}>
               <button
+                data-tour={tourId}
                 onClick={() => navigate(path)}
                 style={{
                   color: active ? 'var(--sidebar-text-strong)' : 'var(--sidebar-text)',
@@ -169,11 +193,12 @@ export default function NavSidebar() {
       <div className="px-2 space-y-0.5 flex-shrink-0">
         <div className="mx-1 mb-2" style={{ borderTop: '1px solid var(--sidebar-border)' }} />
 
-        {bottomLinks.map(({ icon: Icon, label, path, action }) => {
+        {bottomLinks.map(({ icon: Icon, label, path, action, tourId }) => {
           const active = path ? isActive(path) : false;
           return (
             <NavTooltip key={label} label={label} show={!expanded}>
               <button
+                data-tour={tourId}
                 onClick={() => (path ? navigate(path) : action?.())}
                 style={{
                   color: active ? 'var(--sidebar-text-strong)' : 'var(--sidebar-text)',
@@ -237,10 +262,10 @@ export default function NavSidebar() {
               }}
             >
               <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
-                <p className="text-[13px] font-semibold" style={{ color: 'var(--sidebar-text-strong)' }}>{user.name}</p>
-                <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--sidebar-text-muted)' }}>{user.email}</p>
+                <p className="text-[13px] font-semibold" style={{ color: 'var(--sidebar-text-strong)' }}>{userName}</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--sidebar-text-muted)' }}>{userEmail}</p>
                 <span className="text-[10px] font-medium uppercase tracking-wider mt-1 inline-block" style={{ color: 'var(--sidebar-text-muted)' }}>
-                  {user.plan}
+                  {userPlan}
                 </span>
               </div>
               <div className="py-1">
@@ -256,17 +281,12 @@ export default function NavSidebar() {
                 </button>
               </div>
               <div className="py-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
-                <button
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Log out</span>
-                </button>
+                <LogoutButton />
               </div>
             </div>
           )}
 
-          <NavTooltip label={user.name} show={!expanded}>
+          <NavTooltip label={userName} show={!expanded}>
             <button
               onClick={() => setProfileOpen(!profileOpen)}
               style={{
@@ -283,13 +303,13 @@ export default function NavSidebar() {
               }`}
             >
               <div className="w-8 h-8 bg-gradient-to-br from-burnt-orange to-orange-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                <span className="text-white font-semibold text-[13px]">{user.initial}</span>
+                <span className="text-white font-semibold text-[13px]">{userInitial}</span>
               </div>
               {expanded && (
                 <div className="flex-1 flex items-center gap-1.5 min-w-0 overflow-hidden">
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-[13px] font-medium truncate" style={{ color: 'var(--sidebar-text-strong)' }}>{user.name}</p>
-                    <p className="text-[11px] truncate" style={{ color: 'var(--sidebar-text-muted)' }}>{user.plan}</p>
+                    <p className="text-[13px] font-medium truncate" style={{ color: 'var(--sidebar-text-strong)' }}>{userName}</p>
+                    <p className="text-[11px] truncate" style={{ color: 'var(--sidebar-text-muted)' }}>{userPlan}</p>
                   </div>
                   <ChevronUp
                     className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${profileOpen ? 'rotate-0' : 'rotate-180'}`}

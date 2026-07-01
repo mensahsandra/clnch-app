@@ -199,7 +199,7 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
   );
 
   return (
-    <div className="h-full flex flex-col relative">
+    <div className="h-full flex flex-col relative" data-tour="detail-panel">
       {/* Close button - floating top right */}
       <button
         onClick={onClose}

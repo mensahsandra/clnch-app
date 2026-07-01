@@ -21,18 +21,14 @@ import {
   Bell,
   Check,
   FileText,
-  Briefcase,
-  Target,
-  Rocket,
-  Sparkles,
-  Lightbulb,
   Link as LinkIcon,
-  BookOpen,
-  GraduationCap,
-  Pencil,
+  RotateCcw,
+  Flag,
 } from 'lucide-react';
 import { useMonitoring } from '../context/MonitoringContext';
 import { useTheme } from '../context/ThemeContext';
+import { useOnboarding } from '../context/OnboardingContext';
+import { TourRestartButton } from '../components/SpotlightTour';
 
 const SECTIONS = [
   { id: 'general', label: 'General', icon: Settings },
@@ -43,6 +39,7 @@ const SECTIONS = [
   { id: 'capabilities', label: 'Capabilities', icon: Zap },
   { id: 'monitoring', label: 'Monitoring', icon: Globe },
   { id: 'connectors', label: 'Connectors', icon: Link2 },
+  { id: 'onboarding', label: 'Onboarding', icon: Flag },
 ];
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -108,6 +105,7 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('general');
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const { enabled, setEnabled, monitors, removeMonitor } = useMonitoring();
+  const { completed, step, profile, spotlightCompleted, spotlightStep, resetOnboarding } = useOnboarding();
 
   // General state
   const [fullName, setFullName] = useState('Sandra Mensah');
@@ -195,6 +193,31 @@ export default function SettingsPage() {
       swatches: ['#f0f0f0', '#888888', '#1a1a1a'],
     },
   ];
+
+  const onboardingProgress = [
+    { label: 'Welcome', done: step >= 0 },
+    { label: 'Profile Basics', done: step >= 1 || !!profile.preferredName },
+    { label: 'What You Want', done: step >= 2 || profile.opportunityTypes.length > 0 },
+    { label: 'Extension Setup', done: step >= 3 || profile.extensionInstalled },
+    { label: 'Theme & Preferences', done: step >= 4 },
+    { label: "You're Ready", done: completed },
+  ];
+
+  const spotlightSteps = [
+    { label: 'Pipeline', done: spotlightStep >= 0 },
+    { label: 'Fast Capture', done: spotlightStep >= 1 },
+    { label: 'Discover', done: spotlightStep >= 2 },
+    { label: 'Detail Panel', done: spotlightStep >= 3 },
+    { label: 'Chats', done: spotlightStep >= 4 },
+    { label: 'Settings', done: spotlightStep >= 5 },
+  ];
+
+  const handleResetOnboarding = async () => {
+    if (confirm('This will reset your onboarding and clear all tips. Are you sure?')) {
+      await resetOnboarding();
+      window.location.href = '/onboarding';
+    }
+  };
 
   return (
     <div className="flex h-full">
@@ -873,6 +896,70 @@ export default function SettingsPage() {
                   <button className="btn-primary text-sm py-2">Save API Configuration</button>
                 </div>
               )}
+            </div>
+          </SectionCard>
+        </section>
+
+        {/* ── ONBOARDING ── */}
+        <section ref={(el) => { sectionRefs.current['onboarding'] = el; }} className="mb-8">
+          <h2 className="text-lg font-bold text-charcoal mb-4">Onboarding</h2>
+
+          <SectionCard title="Setup Progress">
+            <div className="py-3 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-slate mb-2">Onboarding Wizard</p>
+                <div className="space-y-1.5">
+                  {onboardingProgress.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? 'bg-green-50' : 'bg-cream-fill'}`}>
+                        {item.done ? (
+                          <Check className="w-2.5 h-2.5 text-green-600" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-slate/30" />
+                        )}
+                      </div>
+                      <span className={item.done ? 'text-charcoal' : 'text-slate/60'}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t border-card-border pt-3">
+                <p className="text-xs font-medium text-slate mb-2">Spotlight Tour</p>
+                <div className="space-y-1.5">
+                  {spotlightSteps.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? 'bg-green-50' : 'bg-cream-fill'}`}>
+                        {item.done ? (
+                          <Check className="w-2.5 h-2.5 text-green-600" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-slate/30" />
+                        )}
+                      </div>
+                      <span className={item.done ? 'text-charcoal' : 'text-slate/60'}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {spotlightCompleted && (
+                <div className="pt-2">
+                  <TourRestartButton />
+                </div>
+              )}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Actions">
+            <div className="py-3 space-y-3">
+              <button
+                onClick={handleResetOnboarding}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Restart Onboarding
+              </button>
+              <p className="text-xs text-slate/60">
+                This will reset your onboarding progress and clear all dismissed tips. You will be redirected to the onboarding wizard.
+              </p>
             </div>
           </SectionCard>
         </section>

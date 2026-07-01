@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { OnboardingProvider, useOnboarding } from './context/OnboardingContext';
 import NavSidebar from './components/NavSidebar';
 import FastCaptureFAB from './components/FastCaptureFAB';
 import HomePage from './pages/HomePage';
@@ -6,6 +8,9 @@ import ChatPage from './pages/ChatPage';
 import ChatsPage from './pages/ChatsPage';
 import DiscoverPage from './pages/DiscoverPage';
 import SettingsPage from './pages/SettingsPage';
+import AuthPage from './pages/AuthPage';
+import OnboardingWizard from './pages/OnboardingWizard';
+import SpotlightTour from './components/SpotlightTour';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { OpportunitiesProvider } from './context/OpportunitiesContext';
 import { FastCaptureProvider } from './context/FastCaptureContext';
@@ -21,7 +26,6 @@ function Layout() {
   return (
     <div className="flex h-screen bg-cream overflow-hidden">
       <NavSidebar />
-
       <div
         className="flex-1 min-w-0 flex flex-col overflow-hidden transition-[margin] duration-200"
         style={{ marginLeft: width }}
@@ -42,10 +46,51 @@ function Layout() {
           </Routes>
         )}
       </div>
-
-      {/* Global floating action button */}
       <FastCaptureFAB />
     </div>
+  );
+}
+
+function AppRoutes() {
+  const { user, loading } = useAuth();
+  const { completed, loading: onboardingLoading } = useOnboarding();
+
+  if (loading || onboardingLoading) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-burnt-orange border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="*" element={<Navigate to="/auth" replace />} />
+      </Routes>
+    );
+  }
+
+  if (!completed) {
+    return (
+      <Routes>
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="/auth" element={<Navigate to="/onboarding" replace />} />
+        <Route path="*" element={<Navigate to="/onboarding" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <>
+      <Routes>
+        <Route path="/onboarding" element={<Navigate to="/" replace />} />
+        <Route path="/auth" element={<Navigate to="/" replace />} />
+        <Route path="/*" element={<Layout />} />
+      </Routes>
+      <SpotlightTour />
+    </>
   );
 }
 
@@ -53,17 +98,21 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <SidebarProvider>
-          <OpportunitiesProvider>
-            <MonitoringProvider>
-              <FastCaptureProvider>
-                <WorkspaceProvider>
-                  <Layout />
-                </WorkspaceProvider>
-              </FastCaptureProvider>
-            </MonitoringProvider>
-          </OpportunitiesProvider>
-        </SidebarProvider>
+        <AuthProvider>
+          <OnboardingProvider>
+            <SidebarProvider>
+              <OpportunitiesProvider>
+                <MonitoringProvider>
+                  <FastCaptureProvider>
+                    <WorkspaceProvider>
+                      <AppRoutes />
+                    </WorkspaceProvider>
+                  </FastCaptureProvider>
+                </MonitoringProvider>
+              </OpportunitiesProvider>
+            </SidebarProvider>
+          </OnboardingProvider>
+        </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
   );
