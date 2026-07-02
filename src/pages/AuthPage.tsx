@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Hls from 'hls.js';
+import { supabase } from '../services/supabase';
 import {
   Rocket,
   Mail,
   Lock,
   User,
   CheckCircle2,
-  ArrowUpRight,
   Menu,
   X as CloseIcon,
   Instagram,
@@ -22,11 +22,35 @@ import {
 const VIDEO_URL =
   'https://stream.mux.com/Q3hYHAcLU82ceOUgwDeO4HiwOc3WZn9JD02PugwzxHOI.m3u8';
 
-const SOCIAL_LINKS = [
-  { icon: Instagram, label: 'Instagram', url: '#' },
-  { icon: Twitter, label: 'X', url: '#' },
-  { icon: AtSign, label: 'Threads', url: '#' },
-  { icon: Linkedin, label: 'LinkedIn', url: '#' },
+const SOCIAL_HUB = [
+  {
+    icon: Instagram,
+    label: 'Instagram',
+    url: '#',
+    handle: '@clnch.app',
+    color: 'hover:text-pink-500 hover:border-pink-500/35 hover:bg-pink-500/10',
+  },
+  {
+    icon: Twitter,
+    label: 'X / Twitter',
+    url: '#',
+    handle: '@clnch_app',
+    color: 'hover:text-sky-400 hover:border-sky-400/35 hover:bg-sky-400/10',
+  },
+  {
+    icon: AtSign,
+    label: 'Threads',
+    url: '#',
+    handle: '@clnch',
+    color: 'hover:text-emerald-400 hover:border-emerald-400/35 hover:bg-emerald-400/10',
+  },
+  {
+    icon: Linkedin,
+    label: 'LinkedIn',
+    url: '#',
+    handle: 'CLNCH',
+    color: 'hover:text-blue-500 hover:border-blue-500/35 hover:bg-blue-500/10',
+  },
 ];
 
 function KikaiTranslation() {
@@ -104,7 +128,7 @@ export default function AuthPage() {
   const [success, setSuccess] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
 
   // HLS video setup
@@ -130,6 +154,34 @@ export default function AuthPage() {
     }
   }, []);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user && !success) {
+      setSuccess(true);
+      setTimeout(() => navigate('/'), 1500);
+    }
+  }, [user, loading, navigate, success]);
+
+  const handleGoogleSignIn = useCallback(async () => {
+    setSubmitting(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/auth',
+        },
+      });
+      if (error) {
+        setError(error.message);
+        setSubmitting(false);
+      }
+    } catch (err) {
+      setError('Failed to initiate Google sign in');
+      setSubmitting(false);
+    }
+  }, []);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -152,6 +204,7 @@ export default function AuthPage() {
             setError(error.message || 'Invalid credentials. Please try again.');
           } else {
             setSuccess(true);
+            setTimeout(() => navigate('/'), 1500);
           }
         } else {
           const { error } = await signUp(email, password);
@@ -171,7 +224,7 @@ export default function AuthPage() {
 
   return (
     <div className="relative h-screen w-full font-sans text-white selection:bg-white/20 bg-black overflow-hidden">
-      {/* ── Video Background ─────────────────────────────── */}
+      {/* Video Background */}
       <div className="absolute inset-0 z-0">
         <video
           ref={videoRef}
@@ -181,70 +234,47 @@ export default function AuthPage() {
           playsInline
           autoPlay
         />
-        {/* Fallback gradient shown before video loads */}
-        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-950 opacity-60" />
       </div>
 
-      {/* ── Main Split Layout ─────────────────────────────── */}
+      {/* Main Split Layout */}
       <div className="absolute inset-0 z-10 flex flex-col lg:flex-row">
-        {/* LEFT PANEL — scrollable */}
-        <div className="relative w-full lg:w-1/2 h-full flex flex-col border-b lg:border-b-0 lg:border-r border-white/5 overflow-y-auto">
-          {/* Blurred glass overlay (full panel) */}
+        {/* LEFT PANEL */}
+        <div className="relative w-full lg:w-1/2 h-full flex flex-col border-b lg:border-b-0 lg:border-r border-white/5 overflow-hidden">
+          {/* Frosted glass layer with cutout mask */}
           <div
             className="absolute inset-0 z-0"
             style={{
-              backgroundColor: 'rgba(100, 100, 100, 0.28)',
-              backdropFilter: 'blur(22px)',
-              WebkitBackdropFilter: 'blur(22px)',
+              backgroundColor: 'rgba(131, 131, 131, 0.3)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              // SVG mask creates transparent cutout for CLNCH text
+              maskImage: `url("data:image/svg+xml,${encodeURIComponent(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200" preserveAspectRatio="xMidYMid slice">
+                  <rect width="100%" height="100%" fill="white"/>
+                  <text x="28" y="150" style="font-size:130px;font-weight:900;letter-spacing:-0.04em;font-family:Inter,sans-serif" fill="black">CLNCH</text>
+                </svg>
+              `)}")`,
+              WebkitMaskImage: `url("data:image/svg+xml,${encodeURIComponent(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200" preserveAspectRatio="xMidYMid slice">
+                  <rect width="100%" height="100%" fill="white"/>
+                  <text x="28" y="150" style="font-size:130px;font-weight:900;letter-spacing:-0.04em;font-family:Inter,sans-serif" fill="black">CLNCH</text>
+                </svg>
+              `)}")`,
+              maskSize: 'cover',
+              WebkitMaskSize: 'cover',
+              maskPosition: 'top left',
+              WebkitMaskPosition: 'top left',
             }}
           />
 
-          {/* SVG mask: creates "cutout" through the blur where CLNCH text is */}
-          <svg
-            className="absolute inset-0 w-full pointer-events-none"
-            style={{ height: '34vh', zIndex: 1 }}
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <mask id="clnchCutout">
-                <rect width="100%" height="100%" fill="white" />
-                <text
-                  x="6%"
-                  y="82%"
-                  style={{
-                    fontSize: 'clamp(60px, 12vw, 130px)',
-                    fontWeight: 900,
-                    letterSpacing: '-0.04em',
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                  }}
-                  fill="black"
-                >
-                  CLNCH
-                </text>
-              </mask>
-            </defs>
-            <rect
-              width="100%"
-              height="100%"
-              fill="rgba(100,100,100,0.32)"
-              mask="url(#clnchCutout)"
-              style={{
-                backdropFilter: 'blur(22px)',
-              }}
-            />
-          </svg>
-
           {/* Panel content */}
-          <div className="relative z-10 flex flex-col min-h-full px-6 md:px-10">
-            {/* CLNCH heading placeholder (matches SVG mask position) */}
-            <div
-              className="shrink-0 flex items-end pb-0"
-              style={{ height: '34vh' }}
-            >
+          <div className="relative z-10 flex flex-col h-full px-6 md:px-10 pt-[8vh]">
+            {/* CLNCH spacer - transparent text for layout, actual cutout shows video behind */}
+            <div className="shrink-0" style={{ height: '28vh' }}>
               <span
-                className="select-none text-white/0 pointer-events-none"
+                className="select-none text-transparent pointer-events-none"
                 style={{
-                  fontSize: 'clamp(60px, 12vw, 130px)',
+                  fontSize: 'clamp(60px, 11vw, 130px)',
                   fontWeight: 900,
                   letterSpacing: '-0.04em',
                   lineHeight: 1,
@@ -258,7 +288,7 @@ export default function AuthPage() {
             <div className="w-px bg-white/20 my-4 shrink-0" style={{ height: 40 }} />
 
             {/* Auth Card */}
-            <div className="w-full max-w-md pb-10">
+            <div className="w-full max-w-md pb-8 flex flex-col flex-grow">
               <AnimatePresence mode="wait">
                 {!success ? (
                   <motion.div
@@ -266,7 +296,7 @@ export default function AuthPage() {
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
-                    className="w-full bg-white/8 backdrop-blur-sm rounded-2xl border border-white/12 p-6 md:p-8 shadow-2xl relative overflow-hidden"
+                    className="w-full bg-white/8 backdrop-blur-sm rounded-2xl border border-white/12 p-6 md:p-8 shadow-2xl relative overflow-hidden shrink-0"
                     style={{ background: 'rgba(255,255,255,0.07)' }}
                   >
                     {/* Decorative glow */}
@@ -302,13 +332,7 @@ export default function AuthPage() {
                     <button
                       type="button"
                       disabled={submitting}
-                      onClick={() => {
-                        setSubmitting(true);
-                        setTimeout(() => {
-                          setSubmitting(false);
-                          setSuccess(true);
-                        }, 1200);
-                      }}
+                      onClick={handleGoogleSignIn}
                       className="w-full bg-white text-neutral-900 hover:bg-neutral-100 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all duration-200 shadow-lg cursor-pointer mb-5 active:scale-[0.98] disabled:opacity-60"
                     >
                       <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -445,7 +469,7 @@ export default function AuthPage() {
                     key="success"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="w-full rounded-2xl border border-[#E06D14]/30 p-8 text-center relative overflow-hidden"
+                    className="w-full rounded-2xl border border-[#E06D14]/30 p-8 text-center relative overflow-hidden shrink-0"
                     style={{ background: 'rgba(255,255,255,0.07)' }}
                   >
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E06D14] to-amber-500" />
@@ -474,53 +498,61 @@ export default function AuthPage() {
                 )}
               </AnimatePresence>
 
-              {/* Footer row — always visible below card */}
-              <div className="flex flex-row justify-between items-end border-t border-white/10 mt-8 pt-6 gap-4">
-                <a
-                  href="#"
-                  className="text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white transition-colors flex items-center gap-1 shrink-0"
-                >
-                  Explore Our Page <ArrowUpRight className="w-3 h-3" />
-                </a>
+              {/* Footer row */}
+              <div className="flex flex-row justify-between items-end border-t border-white/10 mt-6 pt-4 gap-4 mt-auto">
                 <KikaiTranslation />
               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT PANEL — video visible, decorative circles, STUDIO */}
-        <div className="relative hidden lg:flex w-1/2 h-full flex-col justify-end pb-2 overflow-hidden">
+        {/* RIGHT PANEL - Social Media Hub */}
+        <div className="relative hidden lg:flex w-1/2 h-full flex-col justify-center items-center overflow-hidden">
           {/* Decorative rings */}
-          <div className="absolute inset-0 pointer-events-none flex items-start justify-center">
-            <div className="relative w-full h-full">
-              <div className="absolute top-[-15vh] left-1/2 -translate-x-1/2 w-[55vh] h-[55vh] border border-white/25 rounded-full" />
-              <div className="absolute top-[20vh] left-1/2 -translate-x-1/2 w-[55vh] h-[55vh] border border-white/25 rounded-full" />
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="relative">
+              <div className="absolute top-[-30vh] left-1/2 -translate-x-1/2 w-[55vh] h-[55vh] border border-white/20 rounded-full" />
+              <div className="absolute top-[15vh] left-1/2 -translate-x-1/2 w-[55vh] h-[55vh] border border-white/20 rounded-full" />
             </div>
           </div>
 
-          {/* STUDIO */}
-          <div className="relative z-10 w-full px-[5%] mb-1">
-            <svg
-              viewBox="0 0 500 130"
-              preserveAspectRatio="xMidYMid meet"
-              className="w-full select-none pointer-events-none overflow-visible"
-            >
-              <text
-                x="0"
-                y="115"
-                textLength="100%"
-                lengthAdjust="spacingAndGlyphs"
-                fill="white"
-                style={{ fontSize: '130px', fontWeight: 900, letterSpacing: '-0.04em' }}
-              >
-                STUDIO
-              </text>
-            </svg>
+          {/* Social Media Hub */}
+          <div className="relative z-10 w-full max-w-md px-8">
+            <div className="text-center mb-8">
+              <h2 className="text-lg font-bold tracking-tight mb-1">Connect With Us</h2>
+              <p className="text-xs text-white/50">Follow our journey across platforms</p>
+            </div>
+            <div className="grid gap-4">
+              {SOCIAL_HUB.map((item, i) => (
+                <motion.a
+                  key={item.label}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + i * 0.08 }}
+                  className={`group flex items-center gap-4 px-5 py-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] ${item.color}`}
+                >
+                  <div className="shrink-0 w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                    <item.icon className="w-5 h-5 text-white group-hover:text-inherit transition-colors" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[9px] uppercase font-bold tracking-widest text-white/50 group-hover:text-white transition-colors">
+                      {item.label}
+                    </span>
+                    <span className="text-sm font-medium text-white/80 font-mono group-hover:text-white transition-colors">
+                      {item.handle}
+                    </span>
+                  </div>
+                </motion.a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Fixed Nav ─────────────────────────────────────── */}
+      {/* Fixed Nav - Clean & Minimal */}
       <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 md:px-10 py-6 pointer-events-none">
         <div className="flex items-center gap-8 pointer-events-auto">
           {/* Logo */}
@@ -531,20 +563,6 @@ export default function AuthPage() {
               ))}
             </div>
             <span className="text-lg font-black tracking-tighter">CLNCH.app</span>
-          </div>
-
-          {/* Social icons — desktop */}
-          <div className="hidden lg:flex items-center gap-3 text-white/60">
-            {SOCIAL_LINKS.map(({ icon: Icon, label, url }) => (
-              <a
-                key={label}
-                href={url}
-                title={label}
-                className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center hover:text-[#E06D14] hover:border-white/20 hover:bg-white/10 transition-all duration-200"
-              >
-                <Icon className="w-3.5 h-3.5" />
-              </a>
-            ))}
           </div>
         </div>
 
@@ -557,7 +575,7 @@ export default function AuthPage() {
         </button>
       </nav>
 
-      {/* ── Mobile Menu ───────────────────────────────────── */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -565,7 +583,7 @@ export default function AuthPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[100] bg-neutral-950 pointer-events-auto flex flex-col"
+            className="fixed inset-0 z-[100] bg-neutral-950 pointer-events-auto flex flex-col lg:hidden"
           >
             <div className="flex items-center justify-between px-6 py-6">
               <div className="flex items-center gap-2">
@@ -582,7 +600,7 @@ export default function AuthPage() {
             </div>
 
             <div className="flex-grow flex flex-col justify-center px-12 gap-8">
-              {SOCIAL_LINKS.map(({ icon: Icon, label, url }, i) => (
+              {SOCIAL_HUB.map(({ icon: Icon, label, url, handle }, i) => (
                 <motion.a
                   key={label}
                   initial={{ opacity: 0, x: -20 }}
@@ -590,10 +608,15 @@ export default function AuthPage() {
                   transition={{ delay: 0.08 + i * 0.05 }}
                   href={url}
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-4xl font-bold tracking-tighter hover:text-[#E06D14] transition-colors flex items-center gap-4"
+                  className="flex items-center gap-4 group"
                 >
-                  <Icon className="w-8 h-8 text-[#E06D14]" />
-                  <span>{label}</span>
+                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-[#E06D14]/10 group-hover:border-[#E06D14]/30 transition-colors">
+                    <Icon className="w-6 h-6 text-[#E06D14]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-2xl font-bold tracking-tighter">{label}</span>
+                    <span className="text-xs text-white/50 font-mono">{handle}</span>
+                  </div>
                 </motion.a>
               ))}
             </div>
