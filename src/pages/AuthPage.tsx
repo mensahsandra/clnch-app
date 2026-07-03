@@ -220,12 +220,13 @@ export default function AuthPage() {
     }
   }, []);
 
+  const initialLoadHandledRef = useRef(false);
   useEffect(() => {
-    if (!loading && user && !success) {
-      setSuccess(true);
-      setTimeout(() => navigate('/'), 1500);
+    if (!loading && !initialLoadHandledRef.current) {
+      initialLoadHandledRef.current = true;
+      if (user) navigate('/'); // already logged in when arriving at /auth
     }
-  }, [user, loading, navigate, success]);
+  }, [loading, user, navigate]);
 
   const handleGoogleSignIn = useCallback(async () => {
     setSubmitting(true);
