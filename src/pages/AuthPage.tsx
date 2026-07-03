@@ -6,9 +6,6 @@ import Hls from 'hls.js';
 import { supabase } from '../services/supabase';
 import {
   Rocket,
-  Mail,
-  Lock,
-  User,
   CheckCircle2,
   Menu,
   X as CloseIcon,
@@ -155,13 +152,16 @@ function KikaiTranslation({ side = 'left' }: { side?: 'left' | 'right' }) {
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'signup' | 'login'>('signup');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackName, setFeedbackName] = useState('');
+  const [feedbackWhatsapp, setFeedbackWhatsapp] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -245,21 +245,46 @@ export default function AuthPage() {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (mode === 'signup' && password !== confirmPassword) { setError('Passwords do not match'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
     setSubmitting(true);
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) setError(error.message || 'Invalid credentials. Please try again.');
-        else { setSuccess(true); setTimeout(() => navigate('/'), 1500); }
+        else setShowOnboardingPrompt(true);
       } else {
         const { error } = await signUp(email, password);
         if (error) setError(error.message || 'Sign up failed. Please try again.');
-        else { setSuccess(true); setTimeout(() => navigate('/onboarding'), 1500); }
+        else setShowOnboardingPrompt(true);
       }
     } finally { setSubmitting(false); }
-  }, [mode, email, password, confirmPassword, signIn, signUp, navigate]);
+  }, [mode, email, password, signIn, signUp]);
+
+  const handleOnboardingChoice = useCallback((choice: 'yes' | 'no') => {
+    if (choice === 'yes') {
+      setShowFeedbackForm(true);
+    } else {
+      setSuccess(true);
+      setTimeout(() => navigate('/'), 800);
+    }
+  }, [navigate]);
+
+  const handleFeedbackSubmit = useCallback(async () => {
+    setFeedbackSubmitting(true);
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        await supabase
+          .from('user_profiles')
+          .update({ full_name: feedbackName || null, whatsapp_number: feedbackWhatsapp || null })
+          .eq('user_id', currentUser.id);
+      }
+    } catch { /* non-critical — proceed */ } finally {
+      setFeedbackSubmitting(false);
+      setSuccess(true);
+      setTimeout(() => navigate('/'), 800);
+    }
+  }, [feedbackName, feedbackWhatsapp, navigate]);
 
   return (
     <div className="relative h-screen w-full font-sans text-white selection:bg-white/20 bg-black overflow-hidden">
@@ -325,14 +350,13 @@ export default function AuthPage() {
 
           {/* Content layer */}
           <div
-            className="relative z-10 flex flex-col h-full"
-            style={{ paddingTop: '72px' }}
+            className="relative z-10 flex flex-col h-full overflow-y-auto no-scrollbar"
+            style={{ paddingTop: '56px' }}
           >
-            {/* Vertically centered group */}
-            <div className="flex-1 flex flex-col justify-center px-6 md:px-10">
+            <div className="flex flex-col px-6 md:px-10 pt-2 pb-8">
 
               {/* CLNCH text — transparent anchor for mask measurement + accent line */}
-              <div className="relative">
+              <div className="relative mb-5">
                 <div className="absolute left-0 top-0 bottom-0 w-px bg-white/40" />
                 <span
                   ref={clnchRef}
@@ -350,44 +374,40 @@ export default function AuthPage() {
                 </span>
               </div>
 
-              {/* Gap between CLNCH and card */}
-              <div style={{ height: 22 }} />
-
               {/* Auth card zone */}
-              <div className="overflow-y-auto no-scrollbar pb-4">
               <AnimatePresence mode="wait">
-                {!success ? (
+
+                {/* ── Main auth form ── */}
+                {!showOnboardingPrompt && !success && (
                   <motion.div
                     key="form"
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
+                    exit={{ opacity: 0, y: -10 }}
                     className="w-full max-w-md rounded-2xl border border-white/10 relative overflow-hidden"
                     style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
                   >
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-[#E06D14]/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#E06D14]/8 rounded-full blur-3xl pointer-events-none" />
+                    <div className="p-5 flex flex-col gap-4">
 
-                    <div className="p-5">
-                      {/* Tabs */}
-                      <div className="flex border-b border-white/10 mb-4">
-                        {(['signup', 'login'] as const).map((tab) => (
-                          <button
-                            key={tab}
-                            onClick={() => { setMode(tab); setError(''); }}
-                            className={`flex-1 pb-2.5 text-xs font-bold uppercase tracking-widest transition-colors relative cursor-pointer ${mode === tab ? 'text-white' : 'text-white/60 hover:text-white/90'}`}
-                          >
-                            {tab === 'signup' ? 'Sign Up' : 'Log In'}
-                            {mode === tab && <motion.div layoutId="tab" className="absolute bottom-0 inset-x-0 h-0.5 bg-[#E06D14]" />}
-                          </button>
-                        ))}
+                      {/* Header */}
+                      <div>
+                        <h2 className="text-xl font-bold tracking-tight text-white mb-1">
+                          Welcome to CLNCH.
+                        </h2>
+                        <p className="text-xs text-white/60 leading-relaxed">
+                          {mode === 'signup'
+                            ? 'Create your account to get started. CLNCH keeps your data on your device.'
+                            : 'Sign in to get started. CLNCH keeps your data on your device.'}
+                        </p>
                       </div>
 
-                      {/* Google */}
+                      {/* Google button */}
                       <button
                         type="button"
                         disabled={submitting}
                         onClick={handleGoogleSignIn}
-                        className="w-full bg-white text-neutral-900 hover:bg-neutral-100 py-2.5 px-4 rounded-xl font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2.5 transition-all cursor-pointer mb-3 active:scale-[0.98] disabled:opacity-60"
+                        className="w-full bg-white text-neutral-900 hover:bg-neutral-100 py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
                       >
                         <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -398,52 +418,31 @@ export default function AuthPage() {
                         Continue with Google
                       </button>
 
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-px flex-grow bg-white/20" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/55">or email</span>
-                        <div className="h-px flex-grow bg-white/20" />
+                      {/* Divider */}
+                      <div className="flex items-center gap-3">
+                        <div className="h-px flex-grow bg-white/15" />
+                        <span className="text-[10px] text-white/45">or</span>
+                        <div className="h-px flex-grow bg-white/15" />
                       </div>
 
-                      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-                        <AnimatePresence mode="popLayout">
-                          {mode === 'signup' && (
-                            <motion.div key="name" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.18 }}>
-                              <label className="text-[9px] font-bold text-white/75 uppercase tracking-widest mb-1 block">Full Name</label>
-                              <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/55" />
-                                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Rivers" className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white placeholder-white/45 focus:outline-none focus:border-[#E06D14] transition-all" />
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        <div>
-                          <label className="text-[9px] font-bold text-white/75 uppercase tracking-widest mb-1 block">Email</label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/55" />
-                            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alex@example.com" className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white placeholder-white/45 focus:outline-none focus:border-[#E06D14] transition-all" />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[9px] font-bold text-white/75 uppercase tracking-widest mb-1 block">Password</label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/55" />
-                            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white placeholder-white/45 focus:outline-none focus:border-[#E06D14] transition-all" />
-                          </div>
-                        </div>
-
-                        <AnimatePresence mode="popLayout">
-                          {mode === 'signup' && (
-                            <motion.div key="confirm" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.18 }}>
-                              <label className="text-[9px] font-bold text-white/75 uppercase tracking-widest mb-1 block">Confirm Password</label>
-                              <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/55" />
-                                <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white placeholder-white/45 focus:outline-none focus:border-[#E06D14] transition-all" />
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                      {/* Email + password form */}
+                      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@email.com"
+                          className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                        />
+                        <input
+                          type="password"
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Password"
+                          className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                        />
 
                         {error && (
                           <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 text-xs text-red-400">
@@ -454,14 +453,118 @@ export default function AuthPage() {
                         <button
                           type="submit"
                           disabled={submitting}
-                          className="w-full bg-[#E06D14] hover:bg-[#c95e0e] text-white py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 mt-1 cursor-pointer active:scale-[0.98] disabled:opacity-60"
+                          className="w-full bg-[#E06D14] hover:bg-[#c95e0e] text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60"
                         >
-                          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === 'signup' ? 'Create Account' : 'Sign In'}
+                          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === 'signup' ? 'Create account' : 'Sign in'}
                         </button>
+
+                        {/* Mode toggle link */}
+                        <p className="text-center text-xs text-white/50">
+                          {mode === 'signup' ? (
+                            <>Already have an account?{' '}
+                              <button type="button" onClick={() => { setMode('login'); setError(''); }} className="text-[#E06D14] hover:underline cursor-pointer font-medium">Sign in</button>
+                            </>
+                          ) : (
+                            <>Don&apos;t have an account?{' '}
+                              <button type="button" onClick={() => { setMode('signup'); setError(''); }} className="text-[#E06D14] hover:underline cursor-pointer font-medium">Create account</button>
+                            </>
+                          )}
+                        </p>
                       </form>
                     </div>
                   </motion.div>
-                ) : (
+                )}
+
+                {/* ── Onboarding prompt ── */}
+                {showOnboardingPrompt && !showFeedbackForm && !success && (
+                  <motion.div
+                    key="onboarding-prompt"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full max-w-md rounded-2xl border border-white/10 overflow-hidden relative"
+                    style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+                  >
+                    <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-[#E06D14] to-amber-400" />
+                    <div className="p-5">
+                      <h3 className="text-base font-bold tracking-tight mb-1 text-white">You&apos;re in!</h3>
+                      <p className="text-xs text-white/60 leading-relaxed mb-5">Before you dive in — would you like to help us shape CLNCH? It only takes 30 seconds.</p>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => handleOnboardingChoice('yes')}
+                          className="w-full bg-[#E06D14] hover:bg-[#c95e0e] text-white py-3 rounded-xl font-bold text-sm transition-all cursor-pointer active:scale-[0.98]"
+                        >
+                          Yes, happy to help
+                        </button>
+                        <button
+                          onClick={() => handleOnboardingChoice('no')}
+                          className="w-full bg-white/8 hover:bg-white/14 border border-white/10 text-white/70 hover:text-white py-3 rounded-xl font-medium text-sm transition-all cursor-pointer"
+                        >
+                          No thanks, take me in
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── Help us improve CLNCH feedback form ── */}
+                {showFeedbackForm && !success && (
+                  <motion.div
+                    key="feedback"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full max-w-md rounded-2xl border border-white/10 overflow-hidden"
+                    style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+                  >
+                    <div className="p-5 flex flex-col gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold tracking-tight text-white mb-2">Help us improve CLNCH</h3>
+                        <p className="text-xs text-white/60 leading-relaxed">
+                          CLNCH is in active development and we talk to early users a lot. Leave your details if you&apos;re open to us reaching out for user testing and feedback. Both fields are optional, and that&apos;s all they&apos;re used for.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-3">
+                        <div>
+                          <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest mb-1.5 block">
+                            Name <span className="text-white/35 normal-case tracking-normal font-normal">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={feedbackName}
+                            onChange={(e) => setFeedbackName(e.target.value)}
+                            placeholder="Your name"
+                            className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest mb-1.5 block">
+                            WhatsApp Number <span className="text-white/35 normal-case tracking-normal font-normal">(optional)</span>
+                          </label>
+                          <input
+                            type="tel"
+                            value={feedbackWhatsapp}
+                            onChange={(e) => setFeedbackWhatsapp(e.target.value)}
+                            placeholder="+1 234 567 8900"
+                            className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleFeedbackSubmit}
+                        disabled={feedbackSubmitting}
+                        className="w-full bg-[#E06D14] hover:bg-[#c95e0e] text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60"
+                      >
+                        {feedbackSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Continue'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── Redirecting ── */}
+                {success && (
                   <motion.div
                     key="success"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -476,12 +579,12 @@ export default function AuthPage() {
                       </div>
                     </div>
                     <h3 className="text-base font-bold tracking-tight mb-1">Welcome to CLNCH</h3>
-                    <p className="text-xs text-white/60 leading-relaxed">Redirecting to your workspace...</p>
+                    <p className="text-xs text-white/60 leading-relaxed">Taking you to your workspace...</p>
                   </motion.div>
                 )}
+
               </AnimatePresence>
             </div>
-            </div>{/* end centered group */}
           </div>
         </div>
 
