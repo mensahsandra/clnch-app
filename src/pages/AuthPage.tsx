@@ -259,6 +259,8 @@ export default function AuthPage() {
         else if (needsConfirmation) setError('Check your email for a confirmation link, then come back to sign in.');
         else setShowOnboardingPrompt(true);
       }
+    } catch {
+      setError('Could not reach the server. Check your connection and try again.');
     } finally { setSubmitting(false); }
   }, [mode, email, password, signIn, signUp]);
 
