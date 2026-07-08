@@ -134,6 +134,19 @@
   }
 }
 
+/* ── Autofill overrides ───────────────────────────────── */
+/* Browser autofill injects a light background (yellow/blue) that makes
+   white text invisible. Force a dark background and white text fill. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #1e1e1e inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 @layer utilities {
   .no-scrollbar {
     scrollbar-width: none;

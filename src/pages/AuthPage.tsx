@@ -254,8 +254,9 @@ export default function AuthPage() {
         if (error) setError(error.message || 'Invalid credentials. Please try again.');
         else setShowOnboardingPrompt(true);
       } else {
-        const { error } = await signUp(email, password);
+        const { error, needsConfirmation } = await signUp(email, password);
         if (error) setError(error.message || 'Sign up failed. Please try again.');
+        else if (needsConfirmation) setError('Check your email for a confirmation link, then come back to sign in.');
         else setShowOnboardingPrompt(true);
       }
     } finally { setSubmitting(false); }
@@ -434,7 +435,8 @@ export default function AuthPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="you@email.com"
-                          className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                          className="w-full rounded-xl py-3 px-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#E06D14]/70 transition-all caret-white"
+                          style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}
                         />
                         <input
                           type="password"
@@ -442,7 +444,8 @@ export default function AuthPage() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Password"
-                          className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                          className="w-full rounded-xl py-3 px-4 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#E06D14]/70 transition-all caret-white"
+                          style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}
                         />
 
                         {error && (
@@ -536,7 +539,8 @@ export default function AuthPage() {
                             value={feedbackName}
                             onChange={(e) => setFeedbackName(e.target.value)}
                             placeholder="Your name"
-                            className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                            className="w-full rounded-xl py-3 px-4 text-sm placeholder-white/35 focus:outline-none focus:border-[#E06D14]/70 transition-all caret-white"
+                            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}
                           />
                         </div>
                         <div>
@@ -548,7 +552,8 @@ export default function AuthPage() {
                             value={feedbackWhatsapp}
                             onChange={(e) => setFeedbackWhatsapp(e.target.value)}
                             placeholder="+1 234 567 8900"
-                            className="w-full bg-white/6 border border-white/12 rounded-xl py-3 px-4 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#E06D14]/70 transition-all"
+                            className="w-full rounded-xl py-3 px-4 text-sm placeholder-white/35 focus:outline-none focus:border-[#E06D14]/70 transition-all caret-white"
+                            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}
                           />
                         </div>
                       </div>

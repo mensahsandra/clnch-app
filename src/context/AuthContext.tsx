@@ -6,7 +6,7 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null; needsConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -35,12 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: undefined },
-    });
-    return { error: error as Error | null };
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    // needsConfirmation = signup succeeded but email confirmation is required before login
+    const needsConfirmation = !error && !data.session;
+    return { error: error as Error | null, needsConfirmation };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
