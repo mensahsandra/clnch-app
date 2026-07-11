@@ -114,8 +114,7 @@ export default function TopBar({
 
   return (
     <header
-      className="h-[60px] bg-card-white border-b border-card-border flex items-center px-6 gap-6 sticky top-0 z-20 transition-[padding-right] duration-200"
-      style={{ paddingRight: rightPanelWidth > 0 ? rightPanelWidth + 24 : 24 }}
+      className="h-[60px] bg-card-white border-b border-card-border flex items-center px-4 md:px-6 gap-3 md:gap-6 sticky top-0 z-20"
     >
       {/* Greeting — clickable to cycle */}
       <button
@@ -144,7 +143,7 @@ export default function TopBar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Ask me anything..."
-            className="pl-9 pr-4 py-2 w-[220px] bg-cream border border-card-border rounded-full text-sm text-charcoal placeholder:text-slate/50 focus:outline-none focus:ring-2 focus:ring-burnt-orange/20 focus:border-burnt-orange/40 transition-all"
+            className="pl-9 pr-4 py-2 w-[140px] sm:w-[180px] md:w-[220px] bg-cream border border-card-border rounded-full text-sm text-charcoal placeholder:text-slate/50 focus:outline-none focus:ring-2 focus:ring-burnt-orange/20 focus:border-burnt-orange/40 transition-all"
           />
         </div>
 
