@@ -222,8 +222,12 @@ export default function AuthPage() {
     }
   }, []);
 
+  const initialLoadHandledRef = useRef(false);
   useEffect(() => {
-    if (!loading && user) navigate('/'); // leave auth page as soon as session is available
+    if (!loading && !initialLoadHandledRef.current) {
+      initialLoadHandledRef.current = true;
+      if (user) navigate('/'); // already logged in when arriving at /auth
+    }
   }, [loading, user, navigate]);
 
   const handleGoogleSignIn = useCallback(async () => {
