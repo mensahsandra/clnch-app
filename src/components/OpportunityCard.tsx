@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Trash2, Eye } from 'lucide-react';
+import { MoreVertical, Trash2, Eye, Archive, ArchiveRestore } from 'lucide-react';
 import { type Opportunity } from '../types';
 import { useOpportunities } from '../context/OpportunitiesContext';
 
@@ -10,6 +10,7 @@ const categoryColors: Record<string, string> = {
   job: 'bg-sky-50 text-sky-700 border-sky-200',
   conference: 'bg-amber-50 text-amber-700 border-amber-200',
   internship: 'bg-pink-50 text-pink-700 border-pink-200',
+  events: 'bg-orange-50 text-orange-700 border-orange-200',
 };
 
 const statusStyles: Record<string, string> = {
@@ -30,6 +31,7 @@ const categoryLabel: Record<string, string> = {
   job: 'Job',
   conference: 'Conference',
   internship: 'Internship',
+  events: 'Event',
 };
 
 const statusLabel: Record<string, string> = {
@@ -50,7 +52,7 @@ interface OpportunityCardProps {
 }
 
 export default function OpportunityCard({ opp, isSelected, onClick }: OpportunityCardProps) {
-  const { deleteOpportunity } = useOpportunities();
+  const { deleteOpportunity, updateOpportunity } = useOpportunities();
   const [showMenu, setShowMenu] = useState(false);
 
   return (
@@ -63,7 +65,7 @@ export default function OpportunityCard({ opp, isSelected, onClick }: Opportunit
       }`}
     >
       {/* Top row */}
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-3" style={{ opacity: opp.archived ? 0.55 : 1 }}>
         <span
           className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
             categoryColors[opp.category] ?? 'bg-gray-50 text-slate border-gray-200'
@@ -106,6 +108,17 @@ export default function OpportunityCard({ opp, isSelected, onClick }: Opportunit
                     View More
                   </button>
                   <div className="border-t border-card-border mx-2" />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateOpportunity(opp.id, { archived: !opp.archived });
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-charcoal hover:bg-cream-fill transition-colors"
+                  >
+                    {opp.archived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                    {opp.archived ? 'Unarchive' : 'Archive'}
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

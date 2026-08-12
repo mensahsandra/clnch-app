@@ -39,6 +39,7 @@ export interface Opportunity {
   monitorId?: string;
   lastCheckedAt?: string;
   changeSummary?: string;
+  archived?: boolean;
 }
 
 export interface ApplicationSession {

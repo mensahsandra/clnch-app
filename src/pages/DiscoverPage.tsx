@@ -151,6 +151,7 @@ const CATEGORY_LABEL: Record<OpportunityCategory, string> = {
   job: 'Job',
   conference: 'Conference',
   internship: 'Internship',
+  events: 'Event',
 };
 
 const CATEGORY_ICON: Record<OpportunityCategory, typeof Briefcase> = {
@@ -160,6 +161,7 @@ const CATEGORY_ICON: Record<OpportunityCategory, typeof Briefcase> = {
   job: Briefcase,
   conference: PartyPopper,
   internship: UtensilsCrossed,
+  events: Calendar,
 };
 
 const CATEGORY_COLOR: Record<OpportunityCategory, string> = {
@@ -169,6 +171,7 @@ const CATEGORY_COLOR: Record<OpportunityCategory, string> = {
   job: 'bg-sky-50 text-sky-700 border-sky-200',
   conference: 'bg-amber-50 text-amber-700 border-amber-200',
   internship: 'bg-pink-50 text-pink-700 border-pink-200',
+  events: 'bg-orange-50 text-orange-700 border-orange-200',
 };
 
 const REGION_BADGE: Record<string, string> = {
