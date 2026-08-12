@@ -147,11 +147,11 @@ export default function SpotlightTour({ steps = DEFAULT_TOUR_STEPS, onComplete, 
       const next = currentStep + 1;
       setCurrentStep(next);
       setSpotlightStep(next);
-      await saveProfile();
+      await saveProfile({ spotlightStep: next });
     } else {
       setSpotlightCompleted(true);
       setActive(false);
-      await saveProfile();
+      await saveProfile({ spotlightCompleted: true, spotlightStep: totalSteps - 1 });
       onComplete?.();
     }
   }, [currentStep, totalSteps, setSpotlightStep, setSpotlightCompleted, saveProfile, onComplete]);
@@ -168,7 +168,7 @@ export default function SpotlightTour({ steps = DEFAULT_TOUR_STEPS, onComplete, 
   const handleSkip = useCallback(async () => {
     setSpotlightCompleted(true);
     setActive(false);
-    await saveProfile();
+    await saveProfile({ spotlightCompleted: true });
     onSkip?.();
   }, [setSpotlightCompleted, saveProfile, onSkip]);
 
@@ -290,13 +290,14 @@ export default function SpotlightTour({ steps = DEFAULT_TOUR_STEPS, onComplete, 
 }
 
 export function TourRestartButton({ onClick }: { onClick?: () => void }) {
-  const { spotlightCompleted, setSpotlightCompleted, setSpotlightStep } = useOnboarding();
+  const { spotlightCompleted, setSpotlightCompleted, setSpotlightStep, saveProfile } = useOnboarding();
 
-  const handleRestart = useCallback(() => {
+  const handleRestart = useCallback(async () => {
     setSpotlightStep(0);
     setSpotlightCompleted(false);
+    await saveProfile({ spotlightCompleted: false, spotlightStep: 0 });
     onClick?.();
-  }, [setSpotlightStep, setSpotlightCompleted, onClick]);
+  }, [setSpotlightStep, setSpotlightCompleted, saveProfile, onClick]);
 
   if (!spotlightCompleted) return null;
 

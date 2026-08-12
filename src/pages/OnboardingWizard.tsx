@@ -45,7 +45,7 @@ export default function OnboardingWizard() {
       if (animating) return;
       setAnimating(true);
       setStep(nextStep);
-      await saveProfile();
+      await saveProfile({ step: nextStep });
       setTimeout(() => setAnimating(false), 400);
     },
     [animating, setStep, saveProfile]
@@ -65,13 +65,13 @@ export default function OnboardingWizard() {
 
   const handleSkip = useCallback(async () => {
     setCompleted(true);
-    await saveProfile();
+    await saveProfile({ completed: true });
     navigate('/');
   }, [setCompleted, saveProfile, navigate]);
 
   const handleFinish = useCallback(async () => {
     setCompleted(true);
-    await saveProfile();
+    await saveProfile({ completed: true });
     navigate('/');
   }, [setCompleted, saveProfile, navigate]);
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../services/supabase';
 
@@ -28,7 +28,7 @@ interface OnboardingContextValue extends OnboardingState {
   setCompleted: (completed: boolean) => void;
   setSpotlightStep: (step: number) => void;
   setSpotlightCompleted: (completed: boolean) => void;
-  saveProfile: () => Promise<void>;
+  saveProfile: (overrides?: Partial<OnboardingState>) => Promise<void>;
   resetOnboarding: () => Promise<void>;
   tips: Record<string, boolean>;
   dismissTip: (tipId: string) => Promise<void>;
@@ -143,9 +143,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, spotlightCompleted }));
   }, []);
 
-  const saveProfile = useCallback(async () => {
+  const saveProfile = useCallback(async (overrides: Partial<OnboardingState> = {}) => {
     if (!user) return;
-    const { profile, completed, step, spotlightCompleted, spotlightStep } = state;
+    const nextState = { ...state, ...overrides };
+    const { profile, completed, step, spotlightCompleted, spotlightStep } = nextState;
     const { error } = await supabase.from('user_profiles').upsert({
       user_id: user.id,
       full_name: profile.fullName || null,
