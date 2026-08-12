@@ -80,8 +80,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
       <header className="sticky top-0 bg-cream/95 backdrop-blur-sm z-10 px-4 py-3 border-b border-card-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-burnt-orange to-orange-400 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md">
+              <img src="/icons/clnch_icon.png" alt="CLNCH" className="w-full h-full object-cover" />
             </div>
             <span className="text-charcoal font-bold text-lg tracking-wide uppercase">
               CLNCH

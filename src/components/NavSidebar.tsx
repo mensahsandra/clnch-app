@@ -10,7 +10,6 @@ import {
   BookOpen,
   LogOut,
   ChevronUp,
-  Sparkles,
   Download,
   ChevronsLeft,
   ChevronsRight,
@@ -137,8 +136,8 @@ export default function NavSidebar() {
       {/* Brand */}
       <div className="flex items-center px-3 py-3 min-h-[56px] flex-shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 flex-shrink-0 bg-gradient-to-br from-burnt-orange to-orange-400 rounded-lg flex items-center justify-center shadow-md border border-burnt-orange/30">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 flex-shrink-0 rounded-lg overflow-hidden shadow-md border border-burnt-orange/30">
+            <img src="/icons/clnch_icon.png" alt="CLNCH" className="w-full h-full object-cover" />
           </div>
           {expanded && (
             <span className="font-bold text-burnt-orange text-[15px] tracking-[0.18em] uppercase whitespace-nowrap overflow-hidden">

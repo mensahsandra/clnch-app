@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useOpportunities } from '../context/OpportunitiesContext';
-import { Sparkles, ArrowUp, Globe, ClipboardPaste } from 'lucide-react';
+import { ArrowUp, Globe, ClipboardPaste } from 'lucide-react';
 
 const SUGGESTION_CHIPS = [
   'Grants closing this month',
@@ -57,8 +57,8 @@ export default function AMAPage() {
           <div className="max-w-3xl mx-auto px-6 pt-24 pb-12 flex flex-col items-center">
             {/* Greeting */}
             <div className="text-center mb-8 animate-fade-in">
-              <div className="w-14 h-14 bg-gradient-to-br from-burnt-orange to-orange-400 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-burnt-orange/20">
-                <Sparkles className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 rounded-2xl overflow-hidden mb-4 shadow-lg shadow-burnt-orange/20 border border-burnt-orange/20">
+                <img src="/icons/clnch_icon.png" alt="CLNCH" className="w-full h-full object-cover" />
               </div>
               <h1 className="text-2xl font-bold text-charcoal mb-1.5">
                 {greeting}, {userName}.

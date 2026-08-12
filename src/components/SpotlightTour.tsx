@@ -63,12 +63,21 @@ interface SpotlightTourProps {
 
 export default function SpotlightTour({ steps = DEFAULT_TOUR_STEPS, onComplete, onSkip }: SpotlightTourProps) {
   const { spotlightStep, spotlightCompleted, setSpotlightStep, setSpotlightCompleted, saveProfile } = useOnboarding();
-  const [active, setActive] = useState(!spotlightCompleted);
+  const [active, setActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(spotlightStep);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const stepRef = useRef(currentStep);
   stepRef.current = currentStep;
+  const completedRef = useRef(spotlightCompleted);
+
+  // Only activate once, after profile has loaded and tour hasn't been completed
+  useEffect(() => {
+    if (!spotlightCompleted && !completedRef.current) {
+      const timer = setTimeout(() => setActive(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [spotlightCompleted]);
 
   const totalSteps = steps.length;
   const step = steps[currentStep];
