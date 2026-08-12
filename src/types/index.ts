@@ -13,7 +13,8 @@ export type OpportunityCategory =
   | 'accelerator'
   | 'job'
   | 'conference'
-  | 'internship';
+  | 'internship'
+  | 'events';
 
 export type UrgencyLevel = 'High' | 'Medium' | 'Low';
 

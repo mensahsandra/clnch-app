@@ -4,8 +4,7 @@ import {
   Home,
   Compass,
   MessageSquare,
-  Briefcase,
-  History,
+  FolderSearch,
   Settings,
   HelpCircle,
   BookOpen,
@@ -23,10 +22,9 @@ import { useOnboarding } from '../context/OnboardingContext';
 
 const navItems = [
   { icon: Home, label: 'Home', path: '/' },
+  { icon: FolderSearch, label: 'Found', path: '/found', tourId: 'pipeline' },
   { icon: Compass, label: 'Discover', path: '/discover' },
   { icon: MessageSquare, label: 'Chats', path: '/chats', tourId: 'chats' },
-  { icon: Briefcase, label: 'Applied', path: '/applied' },
-  { icon: History, label: 'History', path: '/history' },
 ];
 
 const bottomLinks: Array<{

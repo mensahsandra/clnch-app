@@ -111,7 +111,7 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
         addOpportunity(opp);
         setStatus('success');
         setMessage(`Captured: ${scraped.title}`);
-        navigate('/');
+        navigate('/found');
         setTimeout(dismiss, 4000);
       } catch (err) {
         setStatus('error');

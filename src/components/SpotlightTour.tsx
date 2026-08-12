@@ -14,7 +14,7 @@ export const DEFAULT_TOUR_STEPS: TourStep[] = [
   {
     id: 'pipeline',
     title: 'Your Pipeline',
-    description: 'This is your home base. All your captured opportunities live here, organized by status.',
+    description: 'All your captured opportunities live here, organized by status. This is your Found page.',
     targetSelector: '[data-tour="pipeline"]',
     placement: 'bottom',
   },

@@ -10,6 +10,7 @@ import {
   Rocket,
   Briefcase,
   Building2,
+  CalendarDays,
   Check,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const categories: Category[] = [
   { id: 'accelerator', label: 'Accelerator', icon: Rocket },
   { id: 'job', label: 'Job', icon: Briefcase },
   { id: 'conference', label: 'Conference', icon: Building2 },
+  { id: 'events', label: 'Events', icon: CalendarDays },
 ];
 
 interface TopBarProps {

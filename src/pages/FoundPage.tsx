@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import TopBar, { type ViewMode } from '../components/TopBar';
 import OpportunityCard from '../components/OpportunityCard';
 import RightPanel from '../components/RightPanel';
@@ -16,26 +16,42 @@ import {
   Compass,
 } from 'lucide-react';
 
-interface HomePageProps {
-  filterMode?: 'all' | 'applied' | 'pending' | 'history';
-}
-
-export default function HomePage({ filterMode = 'all' }: HomePageProps) {
+export default function FoundPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [rightPanelWidth, setRightPanelWidth] = useState(400);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const { opportunities } = useOpportunities();
   const { captureFromClipboard } = useFastCapture();
   const { setRightPanelWidth: setWorkspaceRightPanelWidth } = useWorkspace();
   const { completed, spotlightCompleted } = useOnboarding();
   const isNewUser = completed && !spotlightCompleted;
-  const navigate = useNavigate();
 
   useEffect(() => {
     setWorkspaceRightPanelWidth(rightPanelWidth);
   }, [rightPanelWidth, setWorkspaceRightPanelWidth]);
+
+  // Sync search query to URL
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    if (q !== searchQuery) {
+      setSearchQuery(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set('q', value);
+    } else {
+      params.delete('q');
+    }
+    setSearchParams(params, { replace: true });
+  };
 
   const filtered = opportunities.filter((opp) => {
     const matchesSearch = [opp.title, opp.org, opp.category].some((field) =>
@@ -44,17 +60,7 @@ export default function HomePage({ filterMode = 'all' }: HomePageProps) {
     if (!matchesSearch) return false;
     const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(opp.category);
     if (!matchesCategory) return false;
-
-    switch (filterMode) {
-      case 'applied':
-        return opp.status === 'applied' || opp.status === 'shortlisted';
-      case 'pending':
-        return opp.status === 'saved' || opp.status === 'in_progress';
-      case 'history':
-        return opp.status === 'filed' || opp.status === 'rejected' || opp.status === 'awarded';
-      default:
-        return true;
-    }
+    return true;
   });
 
   const handleSelect = (opp: Opportunity) => {
@@ -73,7 +79,7 @@ export default function HomePage({ filterMode = 'all' }: HomePageProps) {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           search={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           selectedCategories={selectedCategories}
           onCategoryToggle={(id) => setSelectedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])}
           rightPanelWidth={rightPanelWidth}
@@ -133,7 +139,6 @@ export default function HomePage({ filterMode = 'all' }: HomePageProps) {
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   const { profile, completed } = useOnboarding();
   const isNewUser = completed && !profile.extensionInstalled;
-  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
@@ -158,7 +163,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         {isNewUser && (
           <>
             <button
-              onClick={() => navigate('/discover')}
+              onClick={() => window.open('/discover', '_self')}
               className="flex items-center justify-center gap-2 py-2.5 px-4 border border-card-border rounded-lg text-sm font-medium text-charcoal hover:bg-cream-fill transition-colors"
             >
               <Compass className="w-4 h-4" />

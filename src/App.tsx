@@ -3,7 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { OnboardingProvider, useOnboarding } from './context/OnboardingContext';
 import NavSidebar from './components/NavSidebar';
 import FastCaptureFAB from './components/FastCaptureFAB';
-import HomePage from './pages/HomePage';
+import AMAPage from './pages/AMAPage';
+import FoundPage from './pages/FoundPage';
 import ChatPage from './pages/ChatPage';
 import ChatsPage from './pages/ChatsPage';
 import DiscoverPage from './pages/DiscoverPage';
@@ -36,11 +37,9 @@ function Layout() {
           </Routes>
         ) : (
           <Routes>
-            <Route path="/" element={<HomePage filterMode="all" />} />
+            <Route path="/" element={<AMAPage />} />
+            <Route path="/found" element={<FoundPage />} />
             <Route path="/discover" element={<DiscoverPage />} />
-            <Route path="/applied" element={<HomePage filterMode="applied" />} />
-            <Route path="/pending" element={<HomePage filterMode="pending" />} />
-            <Route path="/history" element={<HomePage filterMode="history" />} />
             <Route path="/chats" element={<ChatsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>

@@ -21,6 +21,7 @@ const CATEGORIES = [
   { id: 'job', label: 'Job', emoji: '💼' },
   { id: 'conference', label: 'Conference', emoji: '🏛️' },
   { id: 'internship', label: 'Internship', emoji: '🌱' },
+  { id: 'events', label: 'Events', emoji: '📅' },
 ];
 
 const processingMessages = [
