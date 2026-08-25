@@ -56,16 +56,18 @@ export default function AMAPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-6 pt-24 pb-12 flex flex-col items-center">
             {/* Greeting */}
-            <div className="text-center mb-8 animate-fade-in">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden mb-4 shadow-lg shadow-burnt-orange/20 border border-burnt-orange/20">
+            <div className="flex items-center gap-4 mb-8 animate-fade-in">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg shadow-burnt-orange/20 border border-burnt-orange/20 flex-shrink-0">
                 <img src="/icons/clnch_icon.png" alt="CLNCH" className="w-full h-full object-cover" />
               </div>
-              <h1 className="text-2xl font-bold text-charcoal mb-1.5">
-                {greeting}, {userName}.
-              </h1>
-              <p className="text-sm text-slate">
-                What opportunity are you looking for today?
-              </p>
+              <div>
+                <h1 className="text-2xl font-bold text-charcoal mb-1.5">
+                  {greeting}, {userName}.
+                </h1>
+                <p className="text-sm text-slate">
+                  What opportunity are you looking for today?
+                </p>
+              </div>
             </div>
 
             {/* Large input */}
