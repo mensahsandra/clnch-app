@@ -66,7 +66,7 @@ export default function ChatPage() {
   const [injectComplete, setInjectComplete] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [pageContent, setPageContent] = useState<string | undefined>(undefined);
+  const [pageContent] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);

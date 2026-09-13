@@ -147,3 +147,4 @@ Deno.serve(async (req: Request) => {
     return errorResponse(500, `Extraction failed: ${message}`);
   }
 });
+// edge-function-redeploy-1789330197498

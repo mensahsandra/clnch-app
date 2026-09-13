@@ -64,5 +64,15 @@ Also watch for: ${hint}.
 Summarize only what changed, not the full page.${custom}`;
 }
 
+export async function createWebMonitor(_monitor: Omit<WebMonitor, 'id' | 'status'>): Promise<{ monitorId: string }> {
+  throw new Error('Web monitoring is not yet available in this phase. The Firecrawl monitor API now runs server-side.');
+}
+
+export function summarizeChange(opportunityName: string, diff: string): string {
+  const trimmed = diff.trim();
+  if (!trimmed) return `Something changed on ${opportunityName}. Review the page for updates.`;
+  return `Update on ${opportunityName}: ${trimmed.slice(0, 200)}${trimmed.length > 200 ? '…' : ''}`;
+}
+
 export { inferCategory, normalizeUrl };
 export type { WebMonitor };
