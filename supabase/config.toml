@@ -1,0 +1,22 @@
+[project]
+id = ""
+
+[functions.extract]
+verify_jwt = false
+entrypoint = "./functions/extract/index.ts"
+
+[functions.refine]
+verify_jwt = false
+entrypoint = "./functions/refine/index.ts"
+
+[functions.profile-voice]
+verify_jwt = false
+entrypoint = "./functions/profile-voice/index.ts"
+
+[functions.chat]
+verify_jwt = false
+entrypoint = "./functions/chat/index.ts"
+
+[functions.assess]
+verify_jwt = false
+entrypoint = "./functions/assess/index.ts"

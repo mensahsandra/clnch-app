@@ -20,8 +20,11 @@ import {
   Mic,
   MicOff,
   ArrowUpRight,
+  Target,
+  AlertCircle,
 } from 'lucide-react';
 import { type Opportunity } from '../types';
+import { chatWithAssistant, assessFit, type AssessmentResult } from '../services/intelligenceService';
 
 interface RightPanelProps {
   opp?: Opportunity;
@@ -37,6 +40,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   job: 'Job',
   conference: 'Conference',
   internship: 'Internship',
+  events: 'Events',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -48,6 +52,7 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: 'Rejected',
   awarded: 'Awarded',
   filed: 'Filed',
+  archived: 'Archived',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -59,6 +64,7 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-50 text-red-600',
   awarded: 'bg-green-100 text-green-700',
   filed: 'bg-green-50 text-green-700',
+  archived: 'bg-slate/10 text-slate',
 };
 
 interface ChatMessage {
@@ -67,12 +73,6 @@ interface ChatMessage {
   content: string;
   createdAt: Date;
 }
-
-const MOCK_REPLIES = [
-  "Great question! For this opportunity, I'd recommend leading your personal statement with your most concrete result — a specific metric or project outcome that directly matches their stated research focus.",
-  "Based on your voice profile, your interdisciplinary background is your strongest differentiator here. Mention your cross-domain work early in any written response.",
-  "The deadline is tight. Let's prioritise your recommenders first — reach out this week with a tailored brief explaining why this specific opportunity aligns with your work.",
-];
 
 export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: RightPanelProps) {
   const [requirementsExpanded, setRequirementsExpanded] = useState(true);
@@ -89,6 +89,10 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
   const [chatInput, setChatInput] = useState('');
   const [isChatTyping, setIsChatTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
+  const [assessing, setAssessing] = useState(false);
+  const [assessError, setAssessError] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -97,24 +101,12 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
 
   const opportunity: Opportunity = opp ?? {
     id: 'demo',
-    title: 'TechForward Research Fellowship',
-    org: 'TechForward Institute',
+    title: 'No opportunity selected',
+    org: '—',
     category: 'fellowship',
-    status: 'pending',
-    urgency: 'High',
-    daysLeft: 12,
-    deadline: '2026-06-24',
-    link: 'https://example.com/fellowship-program-2024',
-    requirements: [
-      'Graduate or postgraduate student status',
-      'Minimum 3.5 GPA',
-      'Research focus in AI/ML or sustainability',
-      'Two letters of recommendation',
-      'Personal statement (500 words max)',
-      'CV/Resume submission',
-    ],
-    location: 'Accra, Ghana (Remote eligible)',
-    contact: 'applications@techforward.org',
+    status: 'saved',
+    urgency: 'Low',
+    daysLeft: 30,
   };
 
   useEffect(() => {
@@ -124,6 +116,8 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
 
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 });
+    setAssessment(null);
+    setAssessError(null);
   }, [opp?.id]);
 
   const handleMarkAsFiled = async () => {
@@ -137,14 +131,37 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
     if (opportunity.link) {
       window.open(opportunity.link, '_blank');
     }
-    // Signal extension to activate on the new tab
     window.postMessage({ type: 'CLNCH_ACTIVATE_ON_TAB', payload: { url: opportunity.link } }, '*');
+  };
+
+  const handleAssess = async () => {
+    if (assessing || !opp) return;
+    setAssessing(true);
+    setAssessError(null);
+    try {
+      const result = await assessFit({
+        title: opportunity.title,
+        org: opportunity.org,
+        category: opportunity.category,
+        deadline: opportunity.deadline,
+        requirements: opportunity.requirements,
+        description: opportunity.description,
+        location: opportunity.location,
+        link: opportunity.link,
+      });
+      setAssessment(result.assessment);
+    } catch (err) {
+      setAssessError(err instanceof Error ? err.message : 'Assessment failed');
+    } finally {
+      setAssessing(false);
+    }
   };
 
   const handleChatSend = async () => {
     const text = chatInput.trim();
-    if (!text || isChatTyping) return;
+    if (!text || isChatTyping || !opp) return;
 
+    setChatError(null);
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -155,16 +172,43 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
     setChatInput('');
     setIsChatTyping(true);
 
-    await new Promise((r) => setTimeout(r, 1600));
+    try {
+      const conversationHistory = chatMessages.map((m) => ({ role: m.role, content: m.content }));
+      const result = await chatWithAssistant(
+        text,
+        {
+          title: opportunity.title,
+          org: opportunity.org,
+          category: opportunity.category,
+          deadline: opportunity.deadline,
+          requirements: opportunity.requirements,
+          description: opportunity.description,
+          location: opportunity.location,
+          link: opportunity.link,
+        },
+        conversationHistory
+      );
 
-    const assistantMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: MOCK_REPLIES[Math.floor(Math.random() * MOCK_REPLIES.length)],
-      createdAt: new Date(),
-    };
-    setChatMessages((prev) => [...prev, assistantMsg]);
-    setIsChatTyping(false);
+      const assistantMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: result.reply,
+        createdAt: new Date(),
+      };
+      setChatMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to get response';
+      setChatError(errorMsg);
+      const assistantMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `I ran into an issue: ${errorMsg}. Please try again.`,
+        createdAt: new Date(),
+      };
+      setChatMessages((prev) => [...prev, assistantMsg]);
+    } finally {
+      setIsChatTyping(false);
+    }
   };
 
   const toggleMic = () => {
@@ -198,9 +242,11 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
       : null
   );
 
+  const fitColor = assessment?.fit_rating === 'strong' ? 'text-green-600' : assessment?.fit_rating === 'moderate' ? 'text-amber-600' : 'text-red-600';
+  const fitBg = assessment?.fit_rating === 'strong' ? 'bg-green-50 border-green-200' : assessment?.fit_rating === 'moderate' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200';
+
   return (
     <div className="h-full flex flex-col relative" data-tour="detail-panel">
-      {/* Close button - floating top right */}
       <button
         onClick={onClose}
         className="absolute top-3 right-3 p-1.5 rounded-md hover:bg-cream-fill transition-colors z-10"
@@ -208,7 +254,6 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
         <X className="w-4 h-4 text-slate" />
       </button>
 
-      {/* Scrollable Body */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 pt-4 pb-2 space-y-3">
 
@@ -217,7 +262,6 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
             <h2 className="text-[15px] font-bold text-charcoal leading-snug mb-2">
               {opportunity.title}
             </h2>
-            {/* Type + Status badges */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-burnt-orange/10 text-burnt-orange">
                 {CATEGORY_LABELS[opportunity.category] ?? opportunity.category}
@@ -270,6 +314,14 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
             <p className="text-sm font-semibold text-charcoal">{opportunity.org}</p>
           </div>
 
+          {/* Description */}
+          {opportunity.description && (
+            <div className="bg-card-white border border-card-border rounded-lg p-3">
+              <p className="text-[10px] text-slate font-medium uppercase tracking-wide mb-1">Summary</p>
+              <p className="text-xs text-charcoal leading-relaxed">{opportunity.description}</p>
+            </div>
+          )}
+
           {/* Source Link */}
           {opportunity.link && (
             <div className="bg-card-white border border-card-border rounded-lg p-3">
@@ -290,31 +342,33 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
           )}
 
           {/* Requirements */}
-          <div className="bg-card-white border border-card-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => setRequirementsExpanded(!requirementsExpanded)}
-              className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cream-fill/50 transition-colors"
-            >
-              <span className="text-[10px] font-medium text-slate uppercase tracking-wide flex items-center gap-1.5">
-                <FileText className="w-3 h-3" />
-                Requirements ({opportunity.requirements?.length ?? 0})
-              </span>
-              {requirementsExpanded
-                ? <ChevronUp className="w-3.5 h-3.5 text-slate" />
-                : <ChevronDown className="w-3.5 h-3.5 text-slate" />
-              }
-            </button>
-            {requirementsExpanded && opportunity.requirements && (
-              <div className="px-3 pb-3 space-y-1.5">
-                {opportunity.requirements.map((req, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-burnt-orange flex-shrink-0 mt-0.5" />
-                    <span className="text-xs text-charcoal">{req}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {opportunity.requirements && opportunity.requirements.length > 0 && (
+            <div className="bg-card-white border border-card-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setRequirementsExpanded(!requirementsExpanded)}
+                className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-cream-fill/50 transition-colors"
+              >
+                <span className="text-[10px] font-medium text-slate uppercase tracking-wide flex items-center gap-1.5">
+                  <FileText className="w-3 h-3" />
+                  Requirements ({opportunity.requirements.length})
+                </span>
+                {requirementsExpanded
+                  ? <ChevronUp className="w-3.5 h-3.5 text-slate" />
+                  : <ChevronDown className="w-3.5 h-3.5 text-slate" />
+                }
+              </button>
+              {requirementsExpanded && (
+                <div className="px-3 pb-3 space-y-1.5">
+                  {opportunity.requirements.map((req, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-burnt-orange flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-charcoal">{req}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Location & Contact */}
           {(opportunity.location || opportunity.contact) && (
@@ -336,7 +390,84 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
             </div>
           )}
 
-          {/* Primary Actions - Compact */}
+          {/* Fit Assessment */}
+          {opp && (
+            <div className="bg-card-white border border-card-border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] text-slate font-medium uppercase tracking-wide flex items-center gap-1.5">
+                  <Target className="w-3 h-3" />
+                  Fit Assessment
+                </p>
+                {!assessment && !assessing && (
+                  <button
+                    onClick={handleAssess}
+                    className="text-[10px] font-medium text-burnt-orange hover:underline"
+                  >
+                    Assess my fit →
+                  </button>
+                )}
+              </div>
+              {assessing && (
+                <div className="flex items-center gap-2 py-2">
+                  <Loader2 className="w-3 h-3 animate-spin text-burnt-orange" />
+                  <span className="text-xs text-slate">Analyzing your profile against requirements…</span>
+                </div>
+              )}
+              {assessError && (
+                <div className="flex items-center gap-2 py-1">
+                  <AlertCircle className="w-3 h-3 text-red-500" />
+                  <span className="text-xs text-red-600">{assessError}</span>
+                </div>
+              )}
+              {assessment && !assessing && (
+                <div className="space-y-2">
+                  <div className={`rounded-lg px-3 py-2 border ${fitBg}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-bold uppercase ${fitColor}`}>
+                        {assessment.fit_rating} fit
+                      </span>
+                    </div>
+                    <p className="text-xs text-charcoal leading-relaxed">{assessment.summary}</p>
+                  </div>
+                  {assessment.matching_criteria.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-medium text-green-700 mb-1">Matches</p>
+                      {assessment.matching_criteria.map((c, i) => (
+                        <div key={i} className="flex items-start gap-1.5 mb-1">
+                          <CheckCircle2 className="w-3 h-3 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs text-charcoal">{c}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {assessment.missing_criteria.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-medium text-red-700 mb-1">Gaps</p>
+                      {assessment.missing_criteria.map((c, i) => (
+                        <div key={i} className="flex items-start gap-1.5 mb-1">
+                          <AlertCircle className="w-3 h-3 text-red-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs text-charcoal">{c}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {assessment.recommendations.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-medium text-burnt-orange mb-1">Recommendations</p>
+                      {assessment.recommendations.map((r, i) => (
+                        <div key={i} className="flex items-start gap-1.5 mb-1">
+                          <span className="text-xs text-burnt-orange font-medium flex-shrink-0">{i + 1}.</span>
+                          <span className="text-xs text-charcoal">{r}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Primary Actions */}
           <div className="flex gap-2">
             <button
               onClick={handleApplyNow}
@@ -345,7 +476,6 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
               <ArrowUpRight className="w-3 h-3" />
               Apply via CLNCH Coach
             </button>
-
             <button
               onClick={() => navigate(`/chat/${opportunity.id}`)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-cream-fill text-charcoal font-medium text-xs rounded-lg hover:bg-cream transition-colors"
@@ -364,7 +494,6 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
             <div className="flex-1 h-px bg-card-border" />
           </div>
 
-          {/* Chat messages */}
           <div ref={chatContainerRef} className="space-y-3 mb-3 max-h-64 overflow-y-auto scrollbar-thin">
             {chatMessages.map((msg) => (
               <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -402,10 +531,15 @@ export default function RightPanel({ opp, onClose, panelWidth, onWidthChange }: 
                 </div>
               </div>
             )}
+            {chatError && (
+              <div className="flex items-center gap-2 text-xs text-red-600 px-1">
+                <AlertCircle className="w-3 h-3" />
+                {chatError}
+              </div>
+            )}
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Chat input */}
           <div className="flex items-end gap-2 bg-cream border border-card-border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-burnt-orange/20 focus-within:border-burnt-orange/30 transition-all">
             <button
               onClick={toggleMic}

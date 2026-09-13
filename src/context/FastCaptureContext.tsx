@@ -9,12 +9,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
 import {
-  scrapeOpportunityUrl,
-  extractUrlFromText,
-  daysUntil,
-  urgencyFromDays,
-} from '../services/firecrawlService';
+  extractOpportunity,
+  extractionToOpportunity,
+} from '../services/intelligenceService';
 import { useOpportunities } from './OpportunitiesContext';
+import { useAuth } from './AuthContext';
+import { supabase } from '../services/supabase';
 import type { Opportunity } from '../types';
 
 type CaptureStatus = 'idle' | 'processing' | 'success' | 'error';
@@ -33,6 +33,15 @@ interface FastCaptureContextValue {
 }
 
 const FastCaptureContext = createContext<FastCaptureContextValue | null>(null);
+
+function extractUrlFromText(text: string): string | null {
+  const match = text.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/i);
+  if (match) return match[0].replace(/[.,;:!?)]+$/, '');
+  if (/^[\w-]+\.(com|org|net|io|dev|co|edu|gov)(\/\S*)?$/i.test(text.trim())) {
+    return `https://${text.trim()}`;
+  }
+  return null;
+}
 
 function CaptureToast({
   status,
@@ -73,6 +82,7 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<CaptureStatus>('idle');
   const [message, setMessage] = useState('');
   const { addOpportunity } = useOpportunities();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const dismiss = useCallback(() => {
@@ -83,34 +93,61 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
   const runCapture = useCallback(
     async (url: string, context?: CaptureContext) => {
       setStatus('processing');
-      setMessage(`Scraping ${new URL(url).hostname}…`);
+      setMessage(`Understanding ${new URL(url).hostname}…`);
 
       try {
-        const scraped = await scrapeOpportunityUrl(url, {
+        const extraction = await extractOpportunity(url, {
           description: context?.description,
           categoryHints: context?.categoryHints,
-          screenshots: context?.screenshots,
         });
-        const days = daysUntil(scraped.deadline);
+
+        const oppFields = extractionToOpportunity(extraction);
+
+        // Persist to Supabase
+        let oppId = `fc-${Date.now()}`;
+
+        if (user) {
+          const { data, error: insertError } = await supabase
+            .from('opportunities')
+            .insert({
+              title: oppFields.title,
+              link: oppFields.link,
+              organization: oppFields.org,
+              category: oppFields.category,
+              requirements: oppFields.requirements ?? [],
+              deadline: oppFields.deadline || null,
+              status: 'saved',
+              location: oppFields.location || null,
+              description: oppFields.description || null,
+              user_id: user.id,
+              extraction_source: 'firecrawl',
+            })
+            .select()
+            .maybeSingle();
+
+          if (!insertError && data) {
+            oppId = data.id;
+          }
+        }
 
         const opp: Opportunity = {
-          id: `fc-${Date.now()}`,
-          title: scraped.title,
-          org: scraped.org,
-          category: scraped.category,
+          id: oppId,
+          title: oppFields.title || 'Untitled Opportunity',
+          org: oppFields.org || new URL(url).hostname,
+          category: oppFields.category || 'fellowship',
           status: 'saved',
-          urgency: urgencyFromDays(days),
-          daysLeft: days,
-          deadline: scraped.deadline,
-          link: scraped.link,
-          requirements: scraped.requirements,
-          location: scraped.location,
-          description: scraped.description,
+          urgency: oppFields.urgency || 'Low',
+          daysLeft: oppFields.daysLeft ?? 30,
+          deadline: oppFields.deadline,
+          link: oppFields.link || url,
+          requirements: oppFields.requirements,
+          location: oppFields.location,
+          description: oppFields.description,
         };
 
         addOpportunity(opp);
         setStatus('success');
-        setMessage(`Captured: ${scraped.title}`);
+        setMessage(`Captured: ${opp.title}`);
         navigate('/found');
         setTimeout(dismiss, 4000);
       } catch (err) {
@@ -119,7 +156,7 @@ export function FastCaptureProvider({ children }: { children: ReactNode }) {
         setTimeout(dismiss, 5000);
       }
     },
-    [addOpportunity, navigate, dismiss]
+    [addOpportunity, user, navigate, dismiss]
   );
 
   const captureUrl = useCallback(

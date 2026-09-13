@@ -1,104 +1,96 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { supabase } from '../services/supabase';
+import { useAuth } from './AuthContext';
 import type { Opportunity } from '../types';
-
-const DEMO_OPPS: Opportunity[] = [
-  {
-    id: '1',
-    title: 'TechForward Research Fellowship',
-    org: 'TechForward Institute',
-    category: 'fellowship',
-    status: 'pending',
-    urgency: 'High',
-    daysLeft: 12,
-    deadline: '2026-06-24',
-    link: 'https://example.com/fellowship',
-    requirements: [
-      'Graduate or postgraduate student status',
-      'Minimum 3.5 GPA',
-      'Research focus in AI/ML or sustainability',
-      'Two letters of recommendation',
-    ],
-    location: 'Accra, Ghana (Remote eligible)',
-    contact: 'applications@techforward.org',
-    monitorStatus: 'watching',
-    lastCheckedAt: '2h ago',
-  },
-  {
-    id: '2',
-    title: 'Green Innovation Grant 2026',
-    org: 'Climate Action Fund',
-    category: 'grant',
-    status: 'in_progress',
-    urgency: 'Medium',
-    daysLeft: 28,
-    deadline: '2026-07-10',
-    link: 'https://example.com/grant',
-    requirements: ['Registered NGO or startup', 'Climate-focused project proposal', 'Budget under $50,000'],
-  },
-  {
-    id: '3',
-    title: 'AI Startup Accelerator Program',
-    org: 'Founders Studio',
-    category: 'accelerator',
-    status: 'applied',
-    urgency: 'High',
-    daysLeft: 5,
-    deadline: '2026-06-17',
-    link: 'https://example.com/accelerator',
-    requirements: ['Early-stage startup (pre-seed to seed)', 'AI/ML product focus', 'Team of at least 2 founders'],
-  },
-  {
-    id: '4',
-    title: 'Frontend Engineer — Remote',
-    org: 'Vercel',
-    category: 'job',
-    status: 'saved',
-    urgency: 'Low',
-    daysLeft: 45,
-    deadline: '2026-07-28',
-    link: 'https://example.com/job',
-    requirements: ['3+ years React experience', 'TypeScript proficiency', 'Experience with edge deployments'],
-  },
-  {
-    id: '5',
-    title: 'Africa Tech Summit 2026',
-    org: 'AfriTech Alliance',
-    category: 'conference',
-    status: 'pending',
-    urgency: 'Medium',
-    daysLeft: 19,
-    deadline: '2026-07-01',
-    link: 'https://example.com/summit',
-    requirements: ['Speaker application required', 'Abstract (300 words max)'],
-    location: 'Lagos, Nigeria',
-    monitorStatus: 'watching',
-    lastCheckedAt: '4h ago',
-  },
-  {
-    id: '6',
-    title: 'Software Engineering Internship',
-    org: 'Google Africa',
-    category: 'internship',
-    status: 'shortlisted',
-    urgency: 'High',
-    daysLeft: 3,
-    deadline: '2026-06-15',
-    link: 'https://example.com/intern',
-    requirements: ['Currently enrolled in CS/Engineering degree', 'Python or Java proficiency', 'Available for 12 weeks'],
-  },
-];
 
 interface OpportunitiesContextValue {
   opportunities: Opportunity[];
+  loading: boolean;
+  error: string | null;
   addOpportunity: (opp: Opportunity) => void;
   updateOpportunity: (id: string, patch: Partial<Opportunity>) => void;
   deleteOpportunity: (id: string) => void;
+  refresh: () => Promise<void>;
 }
 
 const OpportunitiesContext = createContext<OpportunitiesContextValue | null>(null);
 
+function daysUntil(deadline?: string): number {
+  if (!deadline) return 30;
+  const parsed = Date.parse(deadline);
+  if (Number.isNaN(parsed)) return 30;
+  return Math.max(0, Math.ceil((parsed - Date.now()) / 86400000));
+}
+
+function urgencyFromDays(days: number): 'High' | 'Medium' | 'Low' {
+  if (days <= 7) return 'High';
+  if (days <= 21) return 'Medium';
+  return 'Low';
+}
+
+function mapRowToOpportunity(row: Record<string, unknown>): Opportunity {
+  const deadline = row.deadline as string | undefined;
+  const days = daysUntil(deadline);
+  return {
+    id: row.id as string,
+    title: (row.title as string) || (row.organization as string) || 'Untitled Opportunity',
+    org: row.organization as string,
+    category: row.category as Opportunity['category'],
+    status: row.status as Opportunity['status'],
+    urgency: urgencyFromDays(days),
+    daysLeft: days,
+    deadline: deadline || undefined,
+    link: row.link as string | undefined,
+    requirements: row.requirements as string[] | undefined,
+    location: row.location as string | undefined,
+    contact: undefined,
+    description: row.description as string | undefined,
+  monitorStatus: undefined,
+    monitorGoal: undefined,
+    monitorId: undefined,
+    lastCheckedAt: undefined,
+    changeSummary: undefined,
+    archived: row.status === 'archived',
+  };
+}
+
 export function OpportunitiesProvider({ children }: { children: ReactNode }) {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(DEMO_OPPS);
+  const { user } = useAuth();
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOpportunities = useCallback(async () => {
+    if (!user) {
+      setOpportunities([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('opportunities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      const mapped = (data || []).map(mapRowToOpportunity);
+      setOpportunities(mapped);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load opportunities';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchOpportunities();
+  }, [fetchOpportunities]);
 
   const addOpportunity = useCallback((opp: Opportunity) => {
     setOpportunities((prev) => [opp, ...prev]);
@@ -112,8 +104,12 @@ export function OpportunitiesProvider({ children }: { children: ReactNode }) {
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
   }, []);
 
+  const refresh = useCallback(async () => {
+    await fetchOpportunities();
+  }, [fetchOpportunities]);
+
   return (
-    <OpportunitiesContext.Provider value={{ opportunities, addOpportunity, updateOpportunity, deleteOpportunity }}>
+    <OpportunitiesContext.Provider value={{ opportunities, loading, error, addOpportunity, updateOpportunity, deleteOpportunity, refresh }}>
       {children}
     </OpportunitiesContext.Provider>
   );
@@ -124,5 +120,3 @@ export function useOpportunities() {
   if (!ctx) throw new Error('useOpportunities must be used within OpportunitiesProvider');
   return ctx;
 }
-
-export { DEMO_OPPS };

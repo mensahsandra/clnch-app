@@ -22,8 +22,12 @@ import {
   Mail,
   Link as LinkIcon,
   Share2,
+  AlertCircle,
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { useOpportunities } from '../context/OpportunitiesContext';
+import { chatWithAssistant } from '../services/intelligenceService';
+import type { Opportunity } from '../types';
 
 interface Message {
   id: string;
@@ -31,47 +35,6 @@ interface Message {
   content: string;
   createdAt: Date;
 }
-
-const MOCK_OPP = {
-  id: 'demo',
-  title: 'TechForward Research Fellowship',
-  org: 'TechForward Institute',
-  deadline: '2026-06-24',
-  urgency: 'High',
-  link: 'https://example.com/fellowship',
-  requirements: [
-    'Graduate or postgraduate student status',
-    'Minimum 3.5 GPA',
-    'Research focus in AI/ML',
-    'Two letters of recommendation',
-    'Personal statement (500 words)',
-    'CV/Resume submission',
-  ],
-  progress: 2,
-  total: 6,
-};
-
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: '1',
-    role: 'assistant',
-    content: `Welcome to your CLNCH coaching workspace for **${MOCK_OPP.org}**.
-
-I've reviewed the fellowship requirements and your voice profile. Here's your tailored strategy:
-
-**Personal Statement Focus:**
-Lead with your interdisciplinary ML + sustainability research. Their program emphasises cross-domain impact — your work on sustainable AI models is a direct match.
-
-**Recommender Priority:**
-Confirm Prof. Amoah and Dr. Chen this week. Request letters emphasising your leadership in the lab and publication track.
-
-**Differentiation Hook:**
-Most applicants describe research goals abstractly. You should open with a concrete result: "My recent model reduced inference energy use by 34%."
-
-What would you like to work on first?`,
-    createdAt: new Date(Date.now() - 120000),
-  },
-];
 
 const MIN_PANEL_WIDTH = 260;
 const MAX_PANEL_WIDTH = 520;
@@ -84,11 +47,14 @@ function formatTime(date: Date) {
 export default function ChatPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { opportunities, loading: oppLoading } = useOpportunities();
+
+  const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
-  const [chatTitle, setChatTitle] = useState(`${MOCK_OPP.org} — ${MOCK_OPP.title}`);
+  const [chatTitle, setChatTitle] = useState('Loading…');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [detailWidth, setDetailWidth] = useState(DEFAULT_PANEL_WIDTH);
@@ -100,6 +66,8 @@ export default function ChatPage() {
   const [injectComplete, setInjectComplete] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [pageContent, setPageContent] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -107,15 +75,68 @@ export default function ChatPage() {
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
 
+  // Find the opportunity from context or by ID
+  useEffect(() => {
+    if (oppLoading) return;
+
+    if (id) {
+      const found = opportunities.find((o) => o.id === id);
+      if (found) {
+        setOpportunity(found);
+        setChatTitle(`${found.org} — ${found.title}`);
+      } else {
+        setChatTitle('Opportunity not found');
+      }
+    } else if (opportunities.length > 0) {
+      setOpportunity(opportunities[0]);
+      setChatTitle(`${opportunities[0].org} — ${opportunities[0].title}`);
+    } else {
+      setOpportunity(null);
+      setChatTitle('No opportunity selected');
+    }
+  }, [id, opportunities, oppLoading]);
+
+  // Initialize session and welcome message when opportunity is set
+  useEffect(() => {
+    if (!opportunity) return;
+
+    const initSession = async () => {
+      const welcomeContent = `I've loaded **${opportunity.title}** from ${opportunity.org}. Ask me anything about the requirements, your fit, or how to approach the application.`;
+
+      const initialMessage: Message = {
+        id: '1',
+        role: 'assistant',
+        content: welcomeContent,
+        createdAt: new Date(Date.now() - 120000),
+      };
+      setMessages([initialMessage]);
+
+      const { data, error: sessionError } = await supabase
+        .from('application_sessions')
+        .insert({
+          opportunity_id: opportunity.id !== 'demo' ? opportunity.id : null,
+          opportunity_title: opportunity.title,
+          opportunity_org: opportunity.org,
+          opportunity_link: opportunity.link,
+          status: 'active',
+          last_message_preview: welcomeContent.slice(0, 120),
+          last_active_at: new Date().toISOString(),
+        })
+        .select()
+        .maybeSingle();
+
+      if (!sessionError && data) {
+        setSessionId(data.id);
+      }
+    };
+
+    initSession();
+  }, [opportunity]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  useEffect(() => {
-    initSession();
-  }, [id]);
-
-  // Esc to close panel
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowDetail(false); };
     window.addEventListener('keydown', onKey);
@@ -153,22 +174,6 @@ export default function ChatPage() {
     };
   }, [isDragging]);
 
-  const initSession = async () => {
-    const { data, error } = await supabase
-      .from('application_sessions')
-      .insert({
-        opportunity_title: MOCK_OPP.title,
-        opportunity_org: MOCK_OPP.org,
-        opportunity_link: MOCK_OPP.link,
-        status: 'active',
-        last_message_preview: INITIAL_MESSAGES[0].content.slice(0, 120),
-        last_active_at: new Date().toISOString(),
-      })
-      .select()
-      .maybeSingle();
-    if (!error && data) setSessionId(data.id);
-  };
-
   const saveMessage = async (msg: Message) => {
     if (!sessionId) return;
     await supabase.from('application_answers').insert({
@@ -184,31 +189,56 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || isTyping) return;
+    if (!text || isTyping || !opportunity) return;
 
+    setError(null);
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, createdAt: new Date() };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
     saveMessage(userMsg);
 
-    await new Promise((r) => setTimeout(r, 1800));
+    try {
+      const conversationHistory = messages.map((m) => ({ role: m.role, content: m.content }));
 
-    const replies = [
-      `Great point. Let me refine your draft around that angle:\n\n**Refined Draft:**\n\n"My research at the intersection of machine learning and environmental systems has produced measurable outcomes — including a 34% reduction in model inference energy consumption. At TechForward, I aim to extend this work into real-time ecological monitoring systems, bridging the gap between algorithmic efficiency and planetary-scale sustainability."\n\nWould you like me to [Refine further], or shall we move on to the recommendation letter brief?`,
-      `Understood. Here's a sharper version that leads with your unique value:\n\n"I don't just study sustainable AI — I build it. My recent work demonstrated that model compression techniques can reduce inference costs by over a third without accuracy loss. TechForward's mission to operationalise climate-aligned technology is precisely where I see this research reaching its highest impact."\n\nThis version is more assertive and concrete. Ready to [Accept and Fill] or want another iteration?`,
-      `Good instinct. I've reframed it to emphasise collaborative leadership:\n\n"Beyond individual research, I've led a team of 5 graduate students in producing two peer-reviewed papers on energy-aware neural architecture search. This collaborative model — rigorous, inclusive, and impact-driven — reflects the ethos TechForward embodies."\n\nHow does this land?`,
-    ];
+      const result = await chatWithAssistant(
+        text,
+        {
+          title: opportunity.title,
+          org: opportunity.org,
+          category: opportunity.category,
+          deadline: opportunity.deadline,
+          requirements: opportunity.requirements,
+          description: opportunity.description,
+          location: opportunity.location,
+          link: opportunity.link,
+        },
+        conversationHistory,
+        pageContent
+      );
 
-    const assistantMsg: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: replies[Math.floor(Math.random() * replies.length)],
-      createdAt: new Date(),
-    };
-    setMessages((prev) => [...prev, assistantMsg]);
-    setIsTyping(false);
-    saveMessage(assistantMsg);
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: result.reply,
+        createdAt: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+      saveMessage(assistantMsg);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to get response';
+      setError(errorMsg);
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `I ran into an issue: ${errorMsg}. Please try again.`,
+        createdAt: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+      saveMessage(assistantMsg);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -226,8 +256,8 @@ export default function ChatPage() {
   };
 
   const shareVia = (platform: string) => {
-    const url = `${window.location.origin}/chat/${MOCK_OPP.id}`;
-    const text = `Check out my CLNCH coaching workspace for ${MOCK_OPP.title} at ${MOCK_OPP.org}`;
+    const url = `${window.location.origin}/chat/${opportunity?.id ?? 'demo'}`;
+    const text = `Check out my CLNCH coaching workspace for ${opportunity?.title ?? 'this opportunity'} at ${opportunity?.org ?? ''}`;
     let shareUrl = '';
     switch (platform) {
       case 'whatsapp':
@@ -297,7 +327,6 @@ export default function ChatPage() {
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = inputRef.current;
     if (!ta) return;
@@ -305,6 +334,26 @@ export default function ChatPage() {
     const newHeight = Math.min(ta.scrollHeight, 160);
     ta.style.height = `${newHeight}px`;
   }, [input]);
+
+  if (oppLoading) {
+    return (
+      <div className="flex h-full items-center justify-center bg-cream">
+        <Loader2 className="w-6 h-6 animate-spin text-burnt-orange" />
+      </div>
+    );
+  }
+
+  if (!opportunity) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center bg-cream gap-3">
+        <AlertCircle className="w-8 h-8 text-slate" />
+        <p className="text-sm text-slate">No opportunity found. Capture one from a URL first.</p>
+        <button onClick={() => navigate('/found')} className="text-sm text-burnt-orange hover:underline">
+          Go to Found page
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full bg-cream overflow-hidden">
@@ -328,7 +377,7 @@ export default function ChatPage() {
                 onBlur={() => setIsEditingTitle(false)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') setIsEditingTitle(false);
-                  if (e.key === 'Escape') { setIsEditingTitle(false); setChatTitle(`${MOCK_OPP.org} — ${MOCK_OPP.title}`); }
+                  if (e.key === 'Escape') { setIsEditingTitle(false); setChatTitle(`${opportunity.org} — ${opportunity.title}`); }
                 }}
                 className="flex-1 text-sm font-semibold text-charcoal bg-cream-fill border border-card-border rounded-lg px-3 py-1 outline-none focus:ring-2 focus:ring-burnt-orange/20"
                 autoFocus
@@ -343,7 +392,6 @@ export default function ChatPage() {
               </button>
             )}
           </div>
-          {/* Files button now opens detail panel */}
           <button
             onClick={() => setShowDetail((v) => !v)}
             title="Opportunity details"
@@ -382,6 +430,13 @@ export default function ChatPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 px-2">
+              <AlertCircle className="w-3.5 h-3.5" />
+              {error}
             </div>
           )}
 
@@ -438,7 +493,7 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your draft, raw ideas, or speak with the mic..."
+              placeholder="Ask about this opportunity, your fit, or how to apply..."
               rows={1}
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-slate/50 resize-none focus:outline-none leading-relaxed min-h-[24px]"
               style={{ maxHeight: 160, overflowY: 'auto' }}
@@ -460,8 +515,6 @@ export default function ChatPage() {
       {/* Draggable splitter + Detail panel */}
       {showDetail && (
         <>
-          {/* Drag handle */}
-          {/* Draggable splitter with grip button */}
           <div
             onMouseDown={handleDragMouseDown}
             className="w-2 flex-shrink-0 cursor-col-resize transition-colors flex items-center justify-center group bg-card-border hover:bg-burnt-orange/30"
@@ -471,12 +524,10 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Detail Panel — no header, just floating buttons */}
           <div
             style={{ width: detailWidth, transition: isDragging ? 'none' : undefined }}
             className="relative flex-shrink-0 bg-card-white border-l border-card-border flex flex-col overflow-hidden"
           >
-            {/* Floating action buttons top-right */}
             <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
               <div className="relative">
                 <button
@@ -523,99 +574,87 @@ export default function ChatPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-thin p-4 pt-12 space-y-3">
-              {/* Progress tracker */}
-              <div className="bg-burnt-orange/5 border border-burnt-orange/20 rounded-xl p-3">
-                <p className="text-xs font-semibold text-burnt-orange mb-1.5">Application Progress</p>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-charcoal font-medium">{MOCK_OPP.progress} / {MOCK_OPP.total} sections</span>
-                  <span className="text-xs text-slate">{Math.round((MOCK_OPP.progress / MOCK_OPP.total) * 100)}%</span>
-                </div>
-                <div className="h-1.5 bg-cream rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-burnt-orange rounded-full transition-all"
-                    style={{ width: `${(MOCK_OPP.progress / MOCK_OPP.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Open form */}
-              <a
-                href={MOCK_OPP.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-burnt-orange text-white text-xs font-semibold rounded-lg hover:bg-burnt-orange/90 transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                Open application form →
-              </a>
-
-              <div className="border-t border-card-border" />
-
               {/* Metadata */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs">
                   <Clock className="w-3.5 h-3.5 text-burnt-orange flex-shrink-0" />
                   <span className="text-slate">Deadline:</span>
-                  <span className="font-medium text-charcoal">{MOCK_OPP.deadline}</span>
+                  <span className="font-medium text-charcoal">{opportunity.deadline ?? '—'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <Flame className="w-3.5 h-3.5 text-burnt-orange flex-shrink-0" />
                   <span className="text-slate">Urgency:</span>
-                  <span className="font-medium text-red-600">{MOCK_OPP.urgency}</span>
+                  <span className="font-medium text-red-600">{opportunity.urgency}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <Building2 className="w-3.5 h-3.5 text-slate flex-shrink-0" />
                   <span className="text-slate">Org:</span>
-                  <span className="font-medium text-charcoal truncate">{MOCK_OPP.org}</span>
+                  <span className="font-medium text-charcoal truncate">{opportunity.org}</span>
                 </div>
               </div>
+
+              {opportunity.description && (
+                <>
+                  <div className="border-t border-card-border" />
+                  <div>
+                    <p className="text-[10px] text-slate uppercase tracking-widest font-medium mb-1.5">Summary</p>
+                    <p className="text-xs text-charcoal leading-relaxed">{opportunity.description}</p>
+                  </div>
+                </>
+              )}
 
               <div className="border-t border-card-border" />
 
               {/* Requirements */}
-              <div>
-                <p className="text-xs font-semibold text-charcoal mb-2">Requirements</p>
-                <div className="space-y-1.5">
-                  {MOCK_OPP.requirements.map((req, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <div className={`w-3.5 h-3.5 rounded flex-shrink-0 mt-0.5 flex items-center justify-center border ${
-                        i < MOCK_OPP.progress ? 'bg-burnt-orange border-burnt-orange' : 'border-card-border'
-                      }`}>
-                        {i < MOCK_OPP.progress && <CheckCheck className="w-2.5 h-2.5 text-white" />}
+              {opportunity.requirements && opportunity.requirements.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-charcoal mb-2">Requirements</p>
+                  <div className="space-y-1.5">
+                    {opportunity.requirements.map((req, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <div className="w-3.5 h-3.5 rounded flex-shrink-0 mt-0.5 flex items-center justify-center border border-card-border">
+                          <CheckCheck className="w-2.5 h-2.5 text-burnt-orange" />
+                        </div>
+                        <span className="text-xs text-charcoal leading-snug">{req}</span>
                       </div>
-                      <span className="text-xs text-charcoal leading-snug">{req}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="border-t border-card-border" />
 
               {/* Source */}
-              <div>
-                <p className="text-[10px] text-slate uppercase tracking-widest font-medium mb-2">Source</p>
-                <a
-                  href={MOCK_OPP.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-burnt-orange hover:underline break-all"
-                >
-                  <LinkIcon className="w-3 h-3 flex-shrink-0" />
-                  {MOCK_OPP.link}
-                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                </a>
-              </div>
+              {opportunity.link && (
+                <div>
+                  <p className="text-[10px] text-slate uppercase tracking-widest font-medium mb-2">Source</p>
+                  <a
+                    href={opportunity.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-burnt-orange hover:underline break-all"
+                  >
+                    <LinkIcon className="w-3 h-3 flex-shrink-0" />
+                    {opportunity.link}
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                  </a>
+                </div>
+              )}
 
-              {/* Contact */}
+              {/* Location & Contact */}
               <div className="flex flex-wrap gap-3 pt-1">
-                <div className="flex items-center gap-1.5 text-xs text-slate">
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  Accra, Ghana (Remote eligible)
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate">
-                  <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                  applications@techforward.org
-                </div>
+                {opportunity.location && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    {opportunity.location}
+                  </div>
+                )}
+                {opportunity.contact && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate">
+                    <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                    {opportunity.contact}
+                  </div>
+                )}
               </div>
             </div>
           </div>

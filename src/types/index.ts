@@ -1,11 +1,13 @@
 export type OpportunityStatus =
   | 'saved'
+  | 'pending'
   | 'in_progress'
   | 'applied'
   | 'shortlisted'
   | 'rejected'
   | 'awarded'
-  | 'filed';
+  | 'filed'
+  | 'archived';
 
 export type OpportunityCategory =
   | 'fellowship'
